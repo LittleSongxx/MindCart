@@ -33,7 +33,8 @@ public class ShoppingGuideTaskService {
     @Resource
     private GuideTaskPublisher guideTaskPublisher;
 
-    public void add(ShoppingGuideTask task) {
+    /** 创建任务并立即入队异步执行；返回带 id 的任务实体（前端需要 id 做轮询） */
+    public ShoppingGuideTask add(ShoppingGuideTask task) {
         validate(task);
         if (ObjectUtil.isEmpty(task.getTaskNo())) {
             task.setTaskNo(BizNoGenerator.next("GT"));
@@ -48,6 +49,7 @@ public class ShoppingGuideTaskService {
         shoppingGuideTaskMapper.insert(task);
         // 创建即提交执行（异步）
         submit(task.getId());
+        return task;
     }
 
     public void updateById(ShoppingGuideTask task) {

@@ -20,10 +20,10 @@ public class ShoppingGuideTaskController {
     @Resource
     private ShoppingGuideTaskService shoppingGuideTaskService;
 
+    /** 返回创建后的任务（含 id）：前端需要用 id 轮询异步执行结果 */
     @PostMapping("/add")
-    public Result<Void> add(@RequestBody ShoppingGuideTask task) {
-        shoppingGuideTaskService.add(task);
-        return Result.success();
+    public Result<ShoppingGuideTask> add(@RequestBody ShoppingGuideTask task) {
+        return Result.success(shoppingGuideTaskService.add(task));
     }
 
     @PutMapping("/update")
