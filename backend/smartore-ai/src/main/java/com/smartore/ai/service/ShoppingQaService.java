@@ -27,6 +27,9 @@ import java.util.List;
 @Service
 public class ShoppingQaService {
 
+    @Resource
+    private NameFillService nameFillService;
+
     // 召回切片的最低余弦相似度。低于这个分数视为没检索到相关资料，
     // 宁可回答"资料未覆盖"，也不拿不相关的切片让模型硬答。
     private static final double MIN_SIMILARITY_SCORE = 0.5;
@@ -91,12 +94,15 @@ public class ShoppingQaService {
     }
 
     public List<ShoppingQa> selectAll(ShoppingQa shoppingQa) {
-        return shoppingQaMapper.selectAll(shoppingQa);
+        List<ShoppingQa> list = shoppingQaMapper.selectAll(shoppingQa);
+        nameFillService.fillUserNames(list, ShoppingQa::getUserId, ShoppingQa::setUserName);
+        return list;
     }
 
     public PageInfo<ShoppingQa> selectPage(ShoppingQa shoppingQa, Integer pageNum, Integer pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<ShoppingQa> list = shoppingQaMapper.selectAll(shoppingQa);
+        nameFillService.fillUserNames(list, ShoppingQa::getUserId, ShoppingQa::setUserName);
         return PageInfo.of(list);
     }
 

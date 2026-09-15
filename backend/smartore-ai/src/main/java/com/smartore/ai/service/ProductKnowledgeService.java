@@ -20,6 +20,9 @@ import java.util.Map;
 @Service
 public class ProductKnowledgeService {
 
+    @Resource
+    private NameFillService nameFillService;
+
     // 由商品详情和规格参数自动导入的资料统一用这个来源，方便重复导入时精确覆盖
     private static final String SOURCE_PRODUCT_DETAIL = "PRODUCT_DETAIL";
 
@@ -210,7 +213,13 @@ public class ProductKnowledgeService {
     }
 
     public List<ProductKnowledge> selectAll(ProductKnowledge productKnowledge) {
-        return productKnowledgeMapper.selectAll(productKnowledge);
+        List<com.smartore.ai.entity.ProductKnowledge> __rows = productKnowledgeMapper.selectAll(productKnowledge);
+        nameFillService.fillProducts(__rows, com.smartore.ai.entity.ProductKnowledge::getProductId, (row, p) -> {
+            row.setProductName(p.getName());
+            row.setProductNo(p.getProductNo());
+            row.setCoverImage(p.getCoverImage());
+        });
+        return __rows;
     }
 
     public PageInfo<ProductKnowledge> selectPage(ProductKnowledge productKnowledge, Integer pageNum, Integer pageSize) {

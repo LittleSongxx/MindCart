@@ -4,7 +4,7 @@ package com.smartore.common.constant;
  * 网关与内部服务之间的信任头约定。
  *
  * 信任边界：这些头只能由网关注入。服务收到请求时会剥掉外部传入的同名头
- * （见 RequestContextFilter），防止绕过网关直接调用服务伪造身份。
+ * （见 UserContextFilter），防止绕过网关直接调用服务伪造身份。
  */
 public final class HeaderNames {
 

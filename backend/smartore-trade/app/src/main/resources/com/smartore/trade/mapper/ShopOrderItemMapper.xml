@@ -4,10 +4,8 @@
 <mapper namespace="com.smartore.trade.mapper.ShopOrderItemMapper">
 
     <select id="selectByOrderId" resultType="com.smartore.trade.entity.ShopOrderItem">
-        select soi.*,
-               case when pr.id is null then 0 else 1 end as reviewed
-        from shop_order_item soi
-        left join product_review pr on soi.id = pr.order_item_id
+        <!-- 是否已评价（reviewed）不再跨库 JOIN：由服务层经 goods 内部接口批量回填 -->
+        select soi.* from shop_order_item soi
         where soi.order_id = #{orderId}
         order by soi.id asc
     </select>

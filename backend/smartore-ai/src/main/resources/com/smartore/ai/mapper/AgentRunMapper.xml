@@ -4,10 +4,9 @@
 <mapper namespace="com.smartore.ai.mapper.AgentRunMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.AgentRun">
-        select ar.*, sgt.task_no as task_no, sgt.demand_text as demand_text, u.name as user_name
+        select ar.*, sgt.task_no as task_no, sgt.demand_text as demand_text
         from agent_run ar
         left join shopping_guide_task sgt on ar.task_id = sgt.id
-        left join `user` u on ar.user_id = u.id
         <where>
             <if test="runNo != null"> and ar.run_no like concat('%', #{runNo}, '%')</if>
             <if test="taskId != null"> and ar.task_id = #{taskId}</if>

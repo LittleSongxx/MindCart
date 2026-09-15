@@ -6,6 +6,8 @@ import com.smartore.common.exception.CustomException;
 import com.smartore.common.result.ResultCodeEnum;
 import com.smartore.trade.entity.ShopOrder;
 import com.smartore.trade.mapper.ShopOrderItemMapper;
+import com.smartore.goods.api.GoodsFeignClient;
+import com.smartore.trade.entity.ShopOrderItem;
 import com.smartore.trade.mapper.ShopOrderMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -26,12 +28,39 @@ public class ShopOrderService {
     private ShopOrderItemMapper shopOrderItemMapper;
     @Resource
     private OrderSagaService orderSagaService;
+    @Resource
+    private GoodsFeignClient goodsClient;
+
+    /** 组装订单时回填"是否已评价"标记（评价数据在商品域，经内部接口批量查） */
+    private void fillReviewed(List<ShopOrder> orders) {
+        List<Integer> itemIds = orders.stream()
+                .flatMap(o -> o.getItems() == null ? java.util.stream.Stream.<ShopOrderItem>empty() : o.getItems().stream())
+                .map(ShopOrderItem::getId).toList();
+        if (itemIds.isEmpty()) {
+            return;
+        }
+        try {
+            var result = goodsClient.reviewedItemIds(itemIds.stream().map(String::valueOf)
+                    .collect(java.util.stream.Collectors.joining(",")));
+            if (result != null && "200".equals(result.getCode()) && result.getData() != null) {
+                var reviewed = new java.util.HashSet<>(result.getData());
+                for (ShopOrder order : orders) {
+                    if (order.getItems() != null) {
+                        order.getItems().forEach(item -> item.setReviewed(reviewed.contains(item.getId()) ? 1 : 0));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 评价标记属增强信息，查询失败不阻塞订单展示
+        }
+    }
 
     public List<ShopOrder> selectAll(ShopOrder condition) {
         List<ShopOrder> list = visibleOrders(condition);
         for (ShopOrder order : list) {
             order.setItems(shopOrderItemMapper.selectByOrderId(order.getId()));
         }
+        fillReviewed(list);
         return list;
     }
 
@@ -46,6 +75,7 @@ public class ShopOrderService {
             throw new CustomException(ResultCodeEnum.FORBIDDEN);
         }
         order.setItems(shopOrderItemMapper.selectByOrderId(order.getId()));
+        fillReviewed(List.of(order));
         return order;
     }
 

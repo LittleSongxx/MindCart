@@ -13,6 +13,7 @@ public interface ShopOrderMapper {
 
     void updateById(ShopOrder shopOrder);
 
+    @Select("select * from shop_order where id = #{id}")
     ShopOrder selectById(Integer id);
 
     List<ShopOrder> selectAll(ShopOrder shopOrder);

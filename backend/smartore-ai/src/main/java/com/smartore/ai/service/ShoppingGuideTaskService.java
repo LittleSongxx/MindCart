@@ -26,6 +26,9 @@ import java.util.List;
 public class ShoppingGuideTaskService {
 
     @Resource
+    private NameFillService nameFillService;
+
+    @Resource
     private ShoppingGuideTaskMapper shoppingGuideTaskMapper;
     @Resource
     private GuideTaskPublisher guideTaskPublisher;
@@ -87,7 +90,10 @@ public class ShoppingGuideTaskService {
     }
 
     public List<ShoppingGuideTask> selectAll(ShoppingGuideTask task) {
-        return shoppingGuideTaskMapper.selectAll(task);
+        List<ShoppingGuideTask> list = shoppingGuideTaskMapper.selectAll(task);
+        nameFillService.fillUserNames(list, ShoppingGuideTask::getUserId, ShoppingGuideTask::setUserName);
+        nameFillService.fillProducts(list, ShoppingGuideTask::getProductId, (row, p) -> row.setProductName(p.getName()));
+        return list;
     }
 
     public PageInfo<ShoppingGuideTask> selectPage(ShoppingGuideTask task, Integer pageNum, Integer pageSize) {

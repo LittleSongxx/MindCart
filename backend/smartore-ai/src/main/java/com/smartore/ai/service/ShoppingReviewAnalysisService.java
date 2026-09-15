@@ -21,6 +21,9 @@ import java.util.List;
 public class ShoppingReviewAnalysisService {
 
     @Resource
+    private NameFillService nameFillService;
+
+    @Resource
     private ShoppingReviewAnalysisMapper shoppingReviewAnalysisMapper;
     @Resource
     private com.smartore.goods.api.GoodsFeignClient goodsClient;
@@ -59,13 +62,22 @@ public class ShoppingReviewAnalysisService {
         }
     }
 
-    public List<ShoppingReviewAnalysis> selectAll(ShoppingReviewAnalysis shoppingReviewAnalysis) {
-        return shoppingReviewAnalysisMapper.selectAll(shoppingReviewAnalysis);
+    public List<ShoppingReviewAnalysis> selectAll(ShoppingReviewAnalysis condition) {
+        List<ShoppingReviewAnalysis> rows = shoppingReviewAnalysisMapper.selectAll(condition);
+        nameFillService.fillProducts(rows, ShoppingReviewAnalysis::getProductId, (row, p) -> {
+            row.setProductNo(p.getProductNo());
+            row.setCoverImage(p.getCoverImage());
+        });
+        return rows;
     }
 
     public PageInfo<ShoppingReviewAnalysis> selectPage(ShoppingReviewAnalysis shoppingReviewAnalysis, Integer pageNum, Integer pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<ShoppingReviewAnalysis> list = shoppingReviewAnalysisMapper.selectAll(shoppingReviewAnalysis);
+        nameFillService.fillProducts(list, ShoppingReviewAnalysis::getProductId, (row, p) -> {
+            row.setProductNo(p.getProductNo());
+            row.setCoverImage(p.getCoverImage());
+        });
         return PageInfo.of(list);
     }
 

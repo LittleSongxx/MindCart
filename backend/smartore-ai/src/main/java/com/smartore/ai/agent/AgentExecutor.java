@@ -62,6 +62,8 @@ public class AgentExecutor {
     private GoodsFeignClient goodsClient;
     @Resource
     private ProductToolService productToolService;
+    @Resource
+    private com.smartore.ai.mapper.ShoppingGuideTaskMapper taskMapper;
 
     public AgentExecutor(List<AgentTool> tools) {
         this.toolRegistry = tools.stream()
@@ -201,6 +203,8 @@ public class AgentExecutor {
         }
         task.setExecuteTime(cn.hutool.core.date.DateUtil.now());
         task.setUpdateTime(cn.hutool.core.date.DateUtil.now());
+        // 终态落库（DONE/FAILED 都在这里持久化，消费者据此收敛）
+        taskMapper.updateById(task);
     }
 
     // ---- 消息与工具定义 ----

@@ -193,6 +193,23 @@ public class InternalGoodsController {
         return Result.success(vo);
     }
 
+    /** 批量查已评价的订单行ID（trade 组装订单列表用，替代跨库 JOIN） */
+    @GetMapping("/review/reviewed-item-ids")
+    public Result<List<Integer>> reviewedItemIds(@RequestParam String ids) {
+        List<Integer> orderItemIds = java.util.Arrays.stream(ids.split(","))
+                .map(String::trim).filter(x -> !x.isEmpty()).map(Integer::valueOf).toList();
+        if (orderItemIds.isEmpty()) {
+            return Result.success(List.of());
+        }
+        List<Integer> reviewed = new java.util.ArrayList<>();
+        for (Integer orderItemId : orderItemIds) {
+            if (productReviewMapper.selectByOrderItemId(orderItemId) != null) {
+                reviewed.add(orderItemId);
+            }
+        }
+        return Result.success(reviewed);
+    }
+
     /** 商品已审核通过的评价（AI 评价分析证据源） */
     @GetMapping("/review/by-product/{productId}")
     public Result<List<com.smartore.goods.api.ProductReviewVO>> approvedReviews(@PathVariable Integer productId) {

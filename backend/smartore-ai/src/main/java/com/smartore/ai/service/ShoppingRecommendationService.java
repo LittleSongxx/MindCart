@@ -14,6 +14,9 @@ import java.util.List;
 public class ShoppingRecommendationService {
 
     @Resource
+    private NameFillService nameFillService;
+
+    @Resource
     private ShoppingRecommendationMapper shoppingRecommendationMapper;
 
     public void saveTaskRecommendations(Integer taskId, List<ShoppingRecommendation> recommendations) {
@@ -40,8 +43,10 @@ public class ShoppingRecommendationService {
         }
     }
 
-    public List<ShoppingRecommendation> selectAll(ShoppingRecommendation shoppingRecommendation) {
-        return shoppingRecommendationMapper.selectAll(shoppingRecommendation);
+    public List<ShoppingRecommendation> selectAll(ShoppingRecommendation condition) {
+        List<ShoppingRecommendation> list = shoppingRecommendationMapper.selectAll(condition);
+        nameFillService.fillUserNames(list, ShoppingRecommendation::getUserId, ShoppingRecommendation::setUserName);
+        return list;
     }
 
     public PageInfo<ShoppingRecommendation> selectPage(ShoppingRecommendation shoppingRecommendation, Integer pageNum, Integer pageSize) {

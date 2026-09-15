@@ -4,9 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ProductKnowledgeEmbeddingMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ProductKnowledgeEmbedding">
-        select pke.*, p.name as product_name, p.product_no, pk.title as knowledge_title, pkc.chunk_title, pkc.chunk_content
+        select pke.*, pk.title as knowledge_title, pkc.chunk_title, pkc.chunk_content
         from product_knowledge_embedding pke
-        left join product p on pke.product_id = p.id
         left join product_knowledge pk on pke.knowledge_id = pk.id
         left join product_knowledge_chunk pkc on pke.chunk_id = pkc.id
         <where>

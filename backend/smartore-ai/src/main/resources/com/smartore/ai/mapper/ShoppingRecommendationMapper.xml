@@ -4,11 +4,10 @@
 <mapper namespace="com.smartore.ai.mapper.ShoppingRecommendationMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ShoppingRecommendation">
-        select sr.*, sgt.task_no as task_no, ar.run_no as run_no, u.name as user_name
+        select sr.*, sgt.task_no as task_no, ar.run_no as run_no
         from shopping_recommendation sr
         left join shopping_guide_task sgt on sr.task_id = sgt.id
         left join agent_run ar on sr.run_id = ar.id
-        left join `user` u on sr.user_id = u.id
         <where>
             <if test="taskId != null"> and sr.task_id = #{taskId}</if>
             <if test="taskNo != null"> and sgt.task_no like concat('%', #{taskNo}, '%')</if>

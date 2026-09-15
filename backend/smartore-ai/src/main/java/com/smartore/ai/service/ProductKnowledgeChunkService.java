@@ -20,6 +20,9 @@ import java.util.List;
 @Service
 public class ProductKnowledgeChunkService {
 
+    @Resource
+    private NameFillService nameFillService;
+
     private static final int CHUNK_SIZE = 180;
     private static final int OVERLAP_SIZE = 30;
 
@@ -69,7 +72,12 @@ public class ProductKnowledgeChunkService {
     }
 
     public List<ProductKnowledgeChunk> selectAll(ProductKnowledgeChunk productKnowledgeChunk) {
-        return productKnowledgeChunkMapper.selectAll(productKnowledgeChunk);
+        List<com.smartore.ai.entity.ProductKnowledgeChunk> __rows = productKnowledgeChunkMapper.selectAll(productKnowledgeChunk);
+        nameFillService.fillProducts(__rows, com.smartore.ai.entity.ProductKnowledgeChunk::getProductId, (row, p) -> {
+            row.setProductName(p.getName());
+            row.setProductNo(p.getProductNo());
+        });
+        return __rows;
     }
 
     public PageInfo<ProductKnowledgeChunk> selectPage(ProductKnowledgeChunk productKnowledgeChunk, Integer pageNum, Integer pageSize) {

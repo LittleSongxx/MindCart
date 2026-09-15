@@ -58,6 +58,10 @@ public interface GoodsFeignClient {
     @GetMapping("/internal/product/knowledge-source/{productId}")
     Result<KnowledgeSourceVO> knowledgeSource(@PathVariable("productId") Integer productId);
 
+    /** 批量查已评价的订单行ID */
+    @GetMapping("/internal/review/reviewed-item-ids")
+    Result<List<Integer>> reviewedItemIds(@RequestParam("ids") String ids);
+
     /** 商品已审核通过的评价 */
     @GetMapping("/internal/review/by-product/{productId}")
     Result<List<ProductReviewVO>> approvedReviews(@PathVariable("productId") Integer productId);

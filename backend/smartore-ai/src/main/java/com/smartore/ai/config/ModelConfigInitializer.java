@@ -55,9 +55,30 @@ public class ModelConfigInitializer implements ApplicationRunner {
         AiModelConfig condition = new AiModelConfig();
         condition.setModelType(modelType);
         List<AiModelConfig> existing = mapper.selectAll(condition);
+        // 占位密钥（种子数据）不算可用配置
         boolean usable = existing.stream().anyMatch(c -> c.getIsEnabled() != null && c.getIsEnabled() == 1
-                && StrUtil.isNotBlank(c.getApiKey()));
+                && StrUtil.isNotBlank(c.getApiKey()) && !c.getApiKey().contains("请填写"));
         if (usable) {
+            return;
+        }
+        if (!existing.isEmpty()) {
+            // 已有占位行：原地升级为真实配置（保持主键，避免重复行）
+            AiModelConfig row = existing.get(0);
+            AiModelConfig update = new AiModelConfig();
+            update.setId(row.getId());
+            update.setModelType(modelType);
+            update.setProvider(provider);
+            update.setModelName(modelName);
+            update.setBaseUrl(baseUrl);
+            update.setApiKey(apiKey);
+            update.setIsEnabled(1);
+            update.setUpdateTime(cn.hutool.core.date.DateUtil.now());
+            try {
+                configService.updateById(update);
+                log.info("已用环境变量升级{}模型配置：{}", modelType, modelName);
+            } catch (Exception e) {
+                log.warn("{}模型配置升级失败：{}", modelType, e.getMessage());
+            }
             return;
         }
         AiModelConfig config = new AiModelConfig();

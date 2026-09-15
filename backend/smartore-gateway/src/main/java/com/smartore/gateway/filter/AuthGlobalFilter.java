@@ -50,6 +50,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final JWTVerifier verifier;
 
+    @org.springframework.beans.factory.annotation.Value("${smartore.internal-token:}")
+    private String internalToken;
+
     public AuthGlobalFilter(AuthProperties authProperties) {
         this.authProperties = authProperties;
         this.verifier = JWT.require(Algorithm.HMAC256(authProperties.getJwtSecret())).build();
@@ -148,6 +151,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             if (parts.length > 1 && !parts[1].isEmpty()) {
                 builder.header("X-User-Role", parts[1]);
             }
+        }
+        // 网关身份：下游服务据此信任本请求（防绕过网关直连服务）
+        if (internalToken != null && !internalToken.isBlank()) {
+            builder.header("X-Internal-Token", internalToken);
         }
         String traceId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         builder.header(X_TRACE_ID, traceId);

@@ -23,6 +23,9 @@ import java.util.List;
 public class AgentRunService {
 
     @Resource
+    private NameFillService nameFillService;
+
+    @Resource
     private AgentRunMapper agentRunMapper;
     @Resource
     private AgentStepMapper agentStepMapper;

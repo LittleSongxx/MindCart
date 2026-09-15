@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class ProductKnowledgeEmbeddingService {
 
+    @Resource
+    private NameFillService nameFillService;
+
     public static final String PROGRESS_KEY = "smartore:ai:embedding:progress";
     public static final String LOCK_KEY = "smartore:ai:embedding:lock";
 
@@ -48,7 +51,7 @@ public class ProductKnowledgeEmbeddingService {
     private ProductKnowledgeEmbeddingMapper embeddingMapper;
     @Resource
     private AiChatService aiChatService;
-    @Resource
+    @Resource(name = "stringRedisTemplate")
     private StringRedisTemplate redisTemplate;
     @Resource
     private com.smartore.goods.api.GoodsFeignClient goodsClient;
@@ -196,7 +199,12 @@ public class ProductKnowledgeEmbeddingService {
     public PageInfo<ProductKnowledgeEmbedding> selectPage(ProductKnowledgeEmbedding condition,
                                                           Integer pageNum, Integer pageSize) {
         PageHelper.startPage(pageNum, pageSize);
-        return PageInfo.of(embeddingMapper.selectAll(condition));
+        List<ProductKnowledgeEmbedding> rows = embeddingMapper.selectAll(condition);
+        nameFillService.fillProducts(rows, ProductKnowledgeEmbedding::getProductId, (row, p) -> {
+            row.setProductName(p.getName());
+            row.setProductNo(p.getProductNo());
+        });
+        return PageInfo.of(rows);
     }
 
     private void saveEmbedding(ProductKnowledgeChunk chunk, AiModelConfig embConfig) {

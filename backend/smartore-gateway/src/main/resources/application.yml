@@ -51,6 +51,7 @@ management:
         enabled: true
 
 smartore:
+  internal-token: ${SMARTORE_INTERNAL_TOKEN:}
   auth:
     jwt-secret: ${SMARTORE_JWT_SECRET:}
     public-paths:

@@ -25,7 +25,7 @@ spring:
     locations: classpath:db/migration
   rabbitmq:
     host: ${SMARTORE_RABBIT_HOST:127.0.0.1}
-    port: ${SMARTORE_RABBIT_PORT:5674}
+    port: ${SMARTORE_RABBIT_PORT:5774}
     username: ${SMARTORE_RABBIT_USER:smartore}
     password: ${SMARTORE_RABBIT_PASSWORD:}
     virtual-host: ${SMARTORE_RABBIT_VHOST:/}

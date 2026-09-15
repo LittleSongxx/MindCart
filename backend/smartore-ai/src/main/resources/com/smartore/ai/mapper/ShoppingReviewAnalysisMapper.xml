@@ -4,9 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ShoppingReviewAnalysisMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ShoppingReviewAnalysis">
-        select sra.*, p.product_no, p.cover_image
+        select sra.*
         from shopping_review_analysis sra
-        left join product p on sra.product_id = p.id
         <where>
             <if test="analysisNo != null"> and sra.analysis_no like concat('%', #{analysisNo}, '%')</if>
             <if test="productId != null"> and sra.product_id = #{productId}</if>

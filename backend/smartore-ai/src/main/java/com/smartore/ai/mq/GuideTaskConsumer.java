@@ -83,12 +83,21 @@ public class GuideTaskConsumer {
         }
     }
 
-    /** 兜底：WAITING 超 90 秒未被执行的任务重新入队（消息丢失/消费者宕机自愈） */
+    /**
+     * 兜底：WAITING 超 90 秒重新入队；RUNNING 超 10 分钟重置为 WAITING 重发
+     * （消费者宕机/执行线程挂死时任务不至于永远停留中间态 —— 重放安全：新一轮执行会新建 AgentRun）
+     */
     @Scheduled(fixedDelay = 30000)
     public void rescueStaleWaitingTasks() {
-        List<ShoppingGuideTask> stale = taskMapper.selectStaleWaiting(90);
-        for (ShoppingGuideTask task : stale) {
+        for (ShoppingGuideTask task : taskMapper.selectStaleWaiting(90)) {
             log.warn("导购任务兜底重发（taskId={}，taskNo={}）", task.getId(), task.getTaskNo());
+            publisher.publish(task.getId());
+        }
+        for (ShoppingGuideTask task : taskMapper.selectStaleByStatus("RUNNING", 600)) {
+            log.warn("导购任务 RUNNING 超时，重置重发（taskId={}）", task.getId());
+            task.setStatus("WAITING");
+            task.setUpdateTime(cn.hutool.core.date.DateUtil.now());
+            taskMapper.updateById(task);
             publisher.publish(task.getId());
         }
     }

@@ -21,6 +21,10 @@ public interface UserFeignClient {
     @GetMapping("/internal/user/first-admin")
     Result<UserVO> getFirstAdmin();
 
+    /** 批量取用户（展示名回填） */
+    @PostMapping("/internal/user/batch")
+    Result<java.util.List<UserVO>> getUsers(@RequestBody java.util.List<Integer> ids);
+
     /** 按用户名解析用户（AI 用户画像工具） */
     @GetMapping("/internal/user/by-username")
     Result<UserVO> getByUsername(@RequestParam("username") String username);

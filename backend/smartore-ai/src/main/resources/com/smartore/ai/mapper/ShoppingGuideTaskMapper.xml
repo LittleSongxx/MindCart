@@ -4,10 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ShoppingGuideTaskMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ShoppingGuideTask">
-        select sgt.*, u.name as user_name, p.name as product_name
+        select sgt.*
         from shopping_guide_task sgt
-        left join `user` u on sgt.user_id = u.id
-        left join product p on sgt.product_id = p.id
         <where>
             <if test="taskNo != null"> and sgt.task_no like concat('%', #{taskNo}, '%')</if>
             <if test="userId != null"> and sgt.user_id = #{userId}</if>

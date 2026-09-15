@@ -5,6 +5,16 @@ server:
 spring:
   application:
     name: smartore-ai
+  autoconfigure:
+    # 模型客户端全部由 SpringAiModelFactory 按数据库配置动态构建，
+    # 关掉 Spring AI 的静态自动配置（无静态 api-key 时会启动失败）
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
   lifecycle:
     timeout-per-shutdown-phase: 20s
   cloud:
@@ -25,7 +35,7 @@ spring:
     locations: classpath:db/migration
   rabbitmq:
     host: ${SMARTORE_RABBIT_HOST:127.0.0.1}
-    port: ${SMARTORE_RABBIT_PORT:5674}
+    port: ${SMARTORE_RABBIT_PORT:5774}
     username: ${SMARTORE_RABBIT_USER:smartore}
     password: ${SMARTORE_RABBIT_PASSWORD:}
     virtual-host: ${SMARTORE_RABBIT_VHOST:/}

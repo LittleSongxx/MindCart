@@ -4,9 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ProductKnowledgeMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ProductKnowledge">
-        select pk.*, p.name as product_name, p.product_no, p.cover_image
+        select pk.*
         from product_knowledge pk
-        left join product p on pk.product_id = p.id
         <where>
             <if test="productId != null"> and pk.product_id = #{productId}</if>
             <if test="knowledgeType != null"> and pk.knowledge_type = #{knowledgeType}</if>

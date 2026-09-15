@@ -4,9 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ShoppingQaMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ShoppingQa">
-        select sq.*, u.name as user_name
+        select sq.*
         from shopping_qa sq
-        left join `user` u on sq.user_id = u.id
         <where>
             <if test="qaNo != null"> and sq.qa_no like concat('%', #{qaNo}, '%')</if>
             <if test="userId != null"> and sq.user_id = #{userId}</if>

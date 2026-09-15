@@ -49,7 +49,9 @@ public class WalletRecordService {
         record.setRemark(ObjectUtil.isEmpty(request.getRemark()) ? "用户钱包充值" : request.getRemark());
         record.setCreateTime(cn.hutool.core.date.DateUtil.now());
         walletRecordMapper.insert(record);
-        return userMapper.selectById(userId);
+        User updated = userMapper.selectById(userId);
+        updated.setPassword(null);
+        return updated;
     }
 
     public List<WalletRecord> selectOwnRecords() {

@@ -26,6 +26,17 @@ public class InternalUserController {
         return Result.success(toVO(userService.selectById(id)));
     }
 
+    @PostMapping("/user/batch")
+    public Result<java.util.List<UserVO>> getUsers(@RequestBody java.util.List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Result.success(java.util.List.of());
+        }
+        return Result.success(ids.stream()
+                .map(id -> toVO(userService.selectById(id)))
+                .filter(java.util.Objects::nonNull)
+                .toList());
+    }
+
     @GetMapping("/user/by-username")
     public Result<UserVO> getByUsername(@RequestParam String username) {
         return Result.success(toVO(userService.selectByUsername(username)));

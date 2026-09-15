@@ -1,0 +1,84 @@
+# Smartore 本地开发/演示中间件栈（compose 项目名固定为 mall，容器 mall-*）
+# 镜像版本与集群（原 Smartlect 栈）保持一致，全部复用本地已拉取镜像，零新增下载。
+# Java 服务本地用 scripts/dev.sh up 以 jar 方式运行（集群部署另有 systemd/流水线）。
+name: mall
+
+services:
+  mall-mysql:
+    image: mysql:8.4.11
+    container_name: mall-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SMARTORE_MYSQL_ROOT_PASSWORD:?set in run/runtime.env}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:33306:3306"
+    volumes:
+      - mall-mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${SMARTORE_MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mall-redis:
+    image: redis:7.4.7-alpine
+    container_name: mall-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${SMARTORE_REDIS_PASSWORD:?set in run/runtime.env}
+    ports:
+      - "127.0.0.1:26379:6379"
+    volumes:
+      - mall-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${SMARTORE_REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mall-rabbitmq:
+    image: rabbitmq:4.2.9-management
+    container_name: mall-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: smartore
+      RABBITMQ_DEFAULT_PASS: ${SMARTORE_RABBIT_PASSWORD:?set in run/runtime.env}
+    ports:
+      - "127.0.0.1:5774:5672"     # AMQP（服务连接 5674）
+      - "127.0.0.1:15774:15672"   # 管理界面
+    volumes:
+      - mall-rabbit-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mall-nacos:
+    image: nacos/nacos-server:v2.5.3
+    container_name: mall-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      NACOS_AUTH_ENABLED: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+    ports:
+      - "127.0.0.1:28848:8848"
+      - "127.0.0.1:29848:9848"
+    volumes:
+      - mall-nacos-data:/home/nacos/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8848/nacos/v1/console/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  mall-mysql-data:
+  mall-redis-data:
+  mall-rabbit-data:
+  mall-nacos-data:

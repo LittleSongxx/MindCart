@@ -5,7 +5,7 @@ import com.smartore.common.exception.CustomException;
 import com.smartore.common.result.ResultCodeEnum;
 
 /**
- * 当前请求的用户上下文（由网关解析 JWT 后经信任头注入，RequestContextFilter 装载）。
+ * 当前请求的用户上下文（由网关解析 JWT 后经信任头注入，UserContextFilter 装载）。
  * 业务代码不再自行解析 token，鉴权是网关的单一职责。
  */
 public final class UserContext {

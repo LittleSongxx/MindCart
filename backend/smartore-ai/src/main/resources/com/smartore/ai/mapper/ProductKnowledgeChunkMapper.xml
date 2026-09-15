@@ -4,9 +4,8 @@
 <mapper namespace="com.smartore.ai.mapper.ProductKnowledgeChunkMapper">
 
     <select id="selectAll" resultType="com.smartore.ai.entity.ProductKnowledgeChunk">
-        select pkc.*, p.name as product_name, p.product_no, pk.title as knowledge_title, pk.source_type
+        select pkc.*, pk.title as knowledge_title, pk.source_type
         from product_knowledge_chunk pkc
-        left join product p on pkc.product_id = p.id
         left join product_knowledge pk on pkc.knowledge_id = pk.id
         <where>
             <if test="id != null"> and pkc.id = #{id}</if>

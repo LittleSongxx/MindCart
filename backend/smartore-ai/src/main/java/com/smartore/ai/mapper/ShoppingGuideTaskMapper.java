@@ -26,4 +26,9 @@ public interface ShoppingGuideTaskMapper {
     @Select("select * from shopping_guide_task where status = 'WAITING' "
             + "and update_time < date_sub(now(), interval #{seconds} second) order by id asc limit 20")
     List<ShoppingGuideTask> selectStaleWaiting(@Param("seconds") Integer seconds);
+
+    /** 指定状态超时的任务（RUNNING 兜底重置用） */
+    @Select("select * from shopping_guide_task where status = #{status} "
+            + "and update_time < date_sub(now(), interval #{seconds} second) order by id asc limit 20")
+    List<ShoppingGuideTask> selectStaleByStatus(@Param("status") String status, @Param("seconds") Integer seconds);
 }
