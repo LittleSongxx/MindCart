@@ -1,0 +1,74 @@
+server:
+  port: ${SMARTORE_TRADE_PORT:9103}
+  shutdown: graceful
+
+spring:
+  application:
+    name: smartore-trade
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SMARTORE_NACOS_ADDR:127.0.0.1:28848}
+        username: ${SMARTORE_NACOS_USERNAME:nacos}
+        password: ${SMARTORE_NACOS_PASSWORD:nacos}
+        group: ${SMARTORE_NACOS_GROUP:SMARTORE_GROUP}
+        prefer-ip-address: true
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${SMARTORE_MYSQL_HOST:127.0.0.1}:${SMARTORE_MYSQL_PORT:33306}/smartore_trade?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${SMARTORE_MYSQL_USER:root}
+    password: ${SMARTORE_MYSQL_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${SMARTORE_RABBIT_HOST:127.0.0.1}
+    port: ${SMARTORE_RABBIT_PORT:5674}
+    username: ${SMARTORE_RABBIT_USER:smartore}
+    password: ${SMARTORE_RABBIT_PASSWORD:}
+    virtual-host: ${SMARTORE_RABBIT_VHOST:/}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        default-requeue-rejected: false
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath*:com/smartore/**/mapper/*.xml
+
+pagehelper:
+  helper-dialect: mysql
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+smartore:
+  internal-token: ${SMARTORE_INTERNAL_TOKEN:}
+
+logging:
+  level:
+    root: info
+  file:
+    name: logs/smartore-trade.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 7
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"

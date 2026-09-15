@@ -1,0 +1,115 @@
+server:
+  port: ${SMARTORE_GATEWAY_PORT:9080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: smartore-gateway
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SMARTORE_NACOS_ADDR:127.0.0.1:28848}
+        username: ${SMARTORE_NACOS_USERNAME:nacos}
+        password: ${SMARTORE_NACOS_PASSWORD:nacos}
+        group: ${SMARTORE_NACOS_GROUP:SMARTORE_GROUP}
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false # 路由全部显式声明，不按服务名自动暴露
+          routes:
+            - id: user
+              uri: lb://smartore-user
+              predicates: [ "Path=/user/**,/userAddress/**,/wallet/**,/files/**" ]
+            - id: goods
+              uri: lb://smartore-goods
+              predicates: [ "Path=/product/**,/productBrand/**,/productCategory/**,/productParam/**,/productDetail/**,/productFavorite/**,/productReview/**,/afterSaleRule/**" ]
+            - id: trade
+              uri: lb://smartore-trade
+              predicates: [ "Path=/shoppingCart/**,/shopOrder/**" ]
+            - id: ai
+              uri: lb://smartore-ai
+              predicates: [ "Path=/aiModelConfig/**,/promptTemplate/**,/functionTool/**,/productTool/**,/businessTool/**,/productKnowledge/**,/productKnowledgeChunk/**,/productKnowledgeEmbedding/**,/agentRun/**,/agentStep/**,/shoppingGuideTask/**,/shoppingRecommendation/**,/shoppingQa/**,/shoppingReviewAnalysis/**,/shoppingGrowthReport/**" ]
+          default-filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${SMARTORE_RATE_REPLENISH:20}
+                redis-rate-limiter.burstCapacity: ${SMARTORE_RATE_BURST:60}
+                key-resolver: "#{@userKeyResolver}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+smartore:
+  auth:
+    jwt-secret: ${SMARTORE_JWT_SECRET:}
+    public-paths:
+      - "POST /user/login"
+      - "POST /user/register"
+      - "GET /files/download/**"
+    # 管理规则：命中即要求 ADMIN（读写分离 —— 前台只读商品字典，写操作归管理端）
+    admin-rules:
+      - "POST /user/add"
+      - "DELETE /user/delete/**"
+      - "GET /user/selectAll"
+      - "GET /user/selectPage"
+      - "POST /product/add"
+      - "PUT /product/update"
+      - "DELETE /product/delete/**"
+      - "POST /productBrand/add"
+      - "PUT /productBrand/update"
+      - "DELETE /productBrand/delete/**"
+      - "POST /productCategory/add"
+      - "PUT /productCategory/update"
+      - "DELETE /productCategory/delete/**"
+      - "POST /productParam/add"
+      - "PUT /productParam/update"
+      - "DELETE /productParam/delete/**"
+      - "POST /productDetail/add"
+      - "PUT /productDetail/update"
+      - "DELETE /productDetail/delete/**"
+      - "PUT /productReview/update"
+      - "DELETE /productReview/delete/**"
+      - "/afterSaleRule/**"
+      - "/aiModelConfig/**"
+      - "/promptTemplate/**"
+      - "/functionTool/**"
+      - "/productTool/**"
+      - "/businessTool/**"
+      - "/productKnowledge/**"
+      - "/productKnowledgeChunk/**"
+      - "/productKnowledgeEmbedding/**"
+      - "/shoppingReviewAnalysis/**"
+      - "/shoppingGrowthReport/**"
+      - "/agentRun/**"
+      - "/agentStep/**"
+      - "PUT /shopOrder/ship/**"
+      - "GET /shopOrder/selectPage"
+      - "GET /shoppingQa/selectPage"
+      - "GET /shoppingQa/selectAll"
+      - "DELETE /shoppingQa/delete/**"
+      - "DELETE /shoppingGuideTask/delete/**"
+      - "DELETE /shoppingRecommendation/delete/**"
+
+logging:
+  level:
+    root: info
+  file:
+    name: logs/smartore-gateway.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 7
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"

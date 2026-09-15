@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.smartore</groupId>
+    <artifactId>smartore-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>smartore-common</artifactId>
+  <name>smartore-common</name>
+  <description>跨服务共享的契约与基础设施：统一返回体、错误码、全局异常、
+    网关信任头解析（用户上下文/内部令牌/traceId）、Feign 上下文透传、通用工具</description>
+
+  <dependencies>
+    <!-- 只依赖 spring-web（servlet 与 webflux 栈共享），不引 starter-web：
+         gateway 是 WebFlux 应用，common 不能把 servlet 栈带进去 -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <!-- GlobalExceptionHandler 需要 spring-dao（DuplicateKeyException 在 spring-tx 里） -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <!-- 服务是 servlet 栈，编译期需要 servlet API；gateway 不用这个包里的 servlet 相关类 -->
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Feign 上下文透传拦截器：仅在有 openfeign 的服务里生效（ConditionalOnClass） -->
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>cn.hutool</groupId>
+      <artifactId>hutool-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>java-jwt</artifactId>
+    </dependency>
+  </dependencies>
+</project>
