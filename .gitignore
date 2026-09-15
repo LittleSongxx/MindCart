@@ -1,0 +1,27 @@
+# ---- build artifacts ----
+target/
+node_modules/
+dist/
+*.class
+*.jar
+!.mvn/wrapper/*.jar
+
+# ---- runtime secrets (never commit) ----
+run/runtime.env
+run/*.env
+*.pem
+*.key
+
+# ---- IDE / OS ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# ---- logs & uploads ----
+logs/
+files/
+upload/
+
+# ---- local infra data ----
+deploy/data/
