@@ -336,6 +336,8 @@ const askQuestion = () => {
     productName: data.product.name
   })
   if (data.qaConversationId) params.set('conversationId', String(data.qaConversationId))
+  // EventSource 无法携带自定义请求头（SSE 认证的经典问题），token 走 query 参数兜底（网关已支持）
+  params.set('token', JSON.parse(localStorage.getItem('sys-user') || '{}').token || '')
   const source = new EventSource('/api/shoppingQa/askStream?' + params.toString())
   source.addEventListener('delta', e => { data.qaStreaming += e.data })
   source.addEventListener('complete', e => {

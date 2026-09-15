@@ -19,6 +19,10 @@
       <groupId>com.smartore</groupId>
       <artifactId>smartore-goods-api</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.smartore</groupId>
+      <artifactId>smartore-user-api</artifactId>
+    </dependency>
     <!-- 评价购买资格校验需要查询订单（纯 api 契约依赖，无运行时环） -->
     <dependency>
       <groupId>com.smartore</groupId>

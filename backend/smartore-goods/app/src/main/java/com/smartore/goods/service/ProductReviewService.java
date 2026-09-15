@@ -12,6 +12,9 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductReviewService {
@@ -20,6 +23,33 @@ public class ProductReviewService {
     private ProductReviewMapper productReviewMapper;
     @Resource
     private com.smartore.trade.api.OrderFeignClient orderClient;
+    @Resource
+    private com.smartore.user.api.UserFeignClient userClient;
+
+    /** 用户名批量回填（跨库 JOIN 拆除后的服务层替代，一次 Feign 而非逐行） */
+    private void fillUserNames(List<ProductReview> reviews) {
+        List<Integer> ids = reviews.stream().map(ProductReview::getUserId)
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+        try {
+            var result = userClient.getUsers(ids);
+            if (result != null && "200".equals(result.getCode()) && result.getData() != null) {
+                Map<Integer, String> names = result.getData().stream().collect(Collectors.toMap(
+                        com.smartore.user.api.UserVO::getId,
+                        u -> u.getName() == null ? u.getUsername() : u.getName()));
+                reviews.forEach(r -> {
+                    String name = names.get(r.getUserId());
+                    if (name != null) {
+                        r.setUserName(name);
+                    }
+                });
+            }
+        } catch (Exception ignored) {
+            // 展示名缺失不阻塞评价列表
+        }
+    }
 public void add(ProductReview productReview) {
         validate(productReview);
         // 购买资格校验（该用户完成过含此商品的订单）——订单在交易域，经 Feign 查询
@@ -48,12 +78,15 @@ public void add(ProductReview productReview) {
     }
 
     public List<ProductReview> selectAll(ProductReview productReview) {
-        return productReviewMapper.selectAll(productReview);
+        List<ProductReview> list = productReviewMapper.selectAll(productReview);
+        fillUserNames(list);
+        return list;
     }
 
     public PageInfo<ProductReview> selectPage(ProductReview productReview, Integer pageNum, Integer pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<ProductReview> list = productReviewMapper.selectAll(productReview);
+        fillUserNames(list);
         return PageInfo.of(list);
     }
 

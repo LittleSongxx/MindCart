@@ -137,3 +137,20 @@ event:complete data:{"qaNo":"QA...","conversationId":1,"roundNo":1,...}  ← 完
 - token 采集：agent_run.prompt_tokens/completion_tokens（Flyway V3）+ smartore.llm.tokens 指标
 - 循环指纹：同工具同参数第 3 次出现即终止（agent_step 留痕）
 - 解析失败：PARSE_FAILED 状态落轨迹并终止任务（不再带空参数执行全量检索）
+
+
+---
+
+# 第三轮：浏览器级端到端验证（2026-09-16）
+
+用无头 Chromium 走真实用户路径（登录→浏览→详情→AI 问答→购物车），**6/6 通过**，
+并抓出两个仅在浏览器层暴露的问题（curl 层测不出来）：
+
+1. **评价接口 500**：ProductReviewMapper.selectPage 残留跨库 JOIN（`user`/`shop_order`）——
+   之前清理 ai 服务的 8 处时漏了 goods 这处。修复：JOIN 拆除 + userName 服务层批量回填。
+2. **EventSource 无法携带自定义头**：SSE 端点走 `token` 请求头认证，浏览器原生 EventSource
+   发不出自定义头 → 网关 401（curl 测试因能带头而未暴露——**每层都过不等于全链路过**）。
+   修复：token 走 query 参数（网关本就设计了 header→query 兜底）。SSE 认证是「AI 全栈」
+   面经的 H3 题族，这次是真踩到了。
+
+流式渐进渲染的实测采样（回答区文本长度逐秒）：`[9,9,9,9,9,49,...]` —— delta 增量确实在到达。

@@ -4,11 +4,10 @@
 <mapper namespace="com.smartore.goods.mapper.ProductReviewMapper">
 
     <select id="selectAll" resultType="com.smartore.goods.entity.ProductReview">
-        select pr.*, u.name as user_name, p.name as product_name, p.product_no, p.cover_image, so.order_no
+        <!-- 跨库 JOIN 已拆：user_name 由服务层经 user 服务批量回填；order_no 属交易域，列表不再展示 -->
+        select pr.*, p.name as product_name, p.product_no, p.cover_image
         from product_review pr
-        left join `user` u on pr.user_id = u.id
         left join product p on pr.product_id = p.id
-        left join shop_order so on pr.order_id = so.id
         <where>
             <if test="userId != null"> and pr.user_id = #{userId}</if>
             <if test="orderId != null"> and pr.order_id = #{orderId}</if>
