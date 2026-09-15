@@ -1,0 +1,29 @@
+# Smartore 监控采集：5 个 Java 服务（host 网络直连本机端口）+ 中间件 exporter 按需扩展
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []   # 集群侧接入 Alertmanager 时填入
+
+scrape_configs:
+  - job_name: smartore-gateway
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9080'] }]
+  - job_name: smartore-user
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9101'] }]
+  - job_name: smartore-goods
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9102'] }]
+  - job_name: smartore-trade
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9103'] }]
+  - job_name: smartore-ai
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9104'] }]

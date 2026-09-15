@@ -1,0 +1,19 @@
+# Smartore 五个 Java 服务：单 systemd 单元顺序拉起（含前端静态托管由 nginx 承担，见 nginx 配置）
+# 环境变量统一来自 /opt/smartore/run/runtime.env（600 权限，gitignored）
+[Unit]
+Description=Smartore apps (gateway/user/goods/trade/ai)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=forking
+EnvironmentFile=/opt/smartore/run/runtime.env
+WorkingDirectory=/opt/smartore/current
+ExecStart=/opt/smartore/current/ops/start-apps.sh
+ExecStop=/opt/smartore/current/ops/stop-apps.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

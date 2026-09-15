@@ -85,7 +85,14 @@ build_web() {
   (cd web && npm install --silent && npm run build)
 }
 
-svc_jar() { ls backend/"$1"/target/*-SNAPSHOT.jar backend/"$1"/app/target/*-SNAPSHOT.jar 2>/dev/null | head -1; }
+svc_jar() {
+  # 不用 ls+管道（通配未命中非零退出会触发 pipefail 杀脚本）
+  local p
+  for p in "backend/$1"/target/*-SNAPSHOT.jar "backend/$1"/app/target/*-SNAPSHOT.jar; do
+    if [ -f "$p" ]; then echo "$p"; return 0; fi
+  done
+  return 1
+}
 
 start_svc() {
   local name="$1" jar pidfile="run/$1.pid"

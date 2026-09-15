@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: "回滚到上一个 release bundle（不部署新代码）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: mvn test（Testcontainers 自带 MySQL，Docker 内置）
+        run: mvn -B -f backend/pom.xml test
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web
+      - run: npm run build --prefix web
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [backend, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SSH_CMD: ssh -i ~/deploy_key -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 配置 deploy key（服务器网关仅放行 upload/deploy/status/rollback 四动词）
+        run: |
+          install -m600 /dev/stdin ~/deploy_key <<<"${{ secrets.SMARTORE_DEPLOY_KEY }}"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ECS_HOST_KEY }}" >> ~/.ssh/known_hosts
+      - name: 回滚（inputs.rollback=true 时）
+        if: ${{ inputs.rollback }}
+        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} rollback
+      - name: 打 bundle 并上传
+        if: ${{ !inputs.rollback }}
+        run: |
+          git bundle create deploy.bundle HEAD
+          $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} upload < deploy.bundle
+      - name: 部署 + 健康门禁（失败即 exit 1）
+        if: ${{ !inputs.rollback }}
+        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} deploy
+      - name: 部署后状态
+        if: always()
+        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} status || true

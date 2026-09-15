@@ -1,0 +1,43 @@
+groups:
+  - name: smartore-service
+    rules:
+      - alert: SmartoreServiceDown
+        expr: up{job=~"smartore-.*"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "服务 {{ $labels.job }} 实例失联超过 1 分钟"
+      - alert: SmartoreServiceHighErrorRate
+        expr: |
+          sum by (job) (rate(http_server_requests_seconds_count{job=~"smartore-.*", status=~"5.."}[5m]))
+          /
+          sum by (job) (rate(http_server_requests_seconds_count{job=~"smartore-.*"}[5m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} 5xx 比例超 5%"
+      - alert: SmartoreJvmMemoryHigh
+        expr: jvm_memory_used_bytes{area="heap", job=~"smartore-.*"} / jvm_memory_max_bytes{area="heap", job=~"smartore-.*"} > 0.9
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} 堆内存使用超 90%"
+  - name: smartore-business
+    rules:
+      # LLM 调用：5 分钟内错误率超 20%
+      - alert: SmartoreLlmHighErrorRate
+        expr: |
+          sum by (model) (rate(smartore_llm_call_seconds_count{outcome="error"}[5m]))
+          /
+          sum by (model) (rate(smartore_llm_call_seconds_count[5m])) > 0.2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "模型 {{ $labels.model }} 调用错误率超 20%"
+      # LLM 调用慢：P95 超 30s
+      - alert: SmartoreLlmSlow
+        expr: histogram_quantile(0.95, sum by (le, model) (rate(smartore_llm_call_seconds_bucket[5m]))) > 30
+        for: 10m
+        labels: { severity: info }
+        annotations:
+          summary: "模型 {{ $labels.model }} P95 耗时超 30s"
