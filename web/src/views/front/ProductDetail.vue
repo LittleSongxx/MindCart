@@ -148,6 +148,11 @@
                   </el-collapse-item>
                 </el-collapse>
               </div>
+              <!-- 流式增量：生成过程中的渐进渲染（SSE delta 事件） -->
+              <div class="qa-answer" v-else-if="data.qaLoading">
+                <div class="qa-answer-head"><strong>AI 回答中…</strong></div>
+                <pre class="qa-answer-text">{{ data.qaStreaming || '正在检索商品资料…' }}</pre>
+              </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -321,20 +326,30 @@ const askQuestion = () => {
     return
   }
   data.qaLoading = true
-  request.post('/shoppingQa/ask', {
-    userId: data.user.id,
-    // PRODUCT 类型走商品知识库检索，后端据此选择 RAG 链路
+  data.qaStreaming = ''
+  // SSE 流式：delta 渐进渲染，complete 携带完整 QA（含 conversationId，供多轮延续）
+  const params = new URLSearchParams({
+    userId: String(data.user.id),
     questionType: 'PRODUCT',
     questionText: data.qaQuestion,
-    productId: data.product.id,
+    productId: String(data.product.id),
     productName: data.product.name
-  }).then(res => {
-    if (res.code === '200') {
-      data.qaResult = res.data || {}
-    } else {
-      ElMessage.error(res.msg)
-    }
-  }).finally(() => {
+  })
+  if (data.qaConversationId) params.set('conversationId', String(data.qaConversationId))
+  const source = new EventSource('/api/shoppingQa/askStream?' + params.toString())
+  source.addEventListener('delta', e => { data.qaStreaming += e.data })
+  source.addEventListener('complete', e => {
+    data.qaResult = JSON.parse(e.data)
+    data.qaConversationId = data.qaResult.conversationId || data.qaConversationId
+    data.qaStreaming = ''
+    source.close()
+    data.qaLoading = false
+  })
+  source.addEventListener('error', e => {
+    if (e.data) ElMessage.error(String(e.data).slice(0, 120))
+    else if (source.readyState === EventSource.CLOSED) { /* complete 后正常关闭 */ }
+    data.qaStreaming = ''
+    source.close()
     data.qaLoading = false
   })
 }

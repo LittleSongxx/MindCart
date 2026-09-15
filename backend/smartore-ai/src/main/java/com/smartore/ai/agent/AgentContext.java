@@ -11,6 +11,21 @@ public class AgentContext {
     private final Integer userId;
     private volatile OrderStatsVO cachedOrderStats;
     private volatile boolean orderStatsLoaded;
+    private final java.util.concurrent.atomic.AtomicInteger promptTokens = new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger completionTokens = new java.util.concurrent.atomic.AtomicInteger();
+
+    public void addTokens(int prompt, int completion) {
+        promptTokens.addAndGet(prompt);
+        completionTokens.addAndGet(completion);
+    }
+
+    public int getPromptTokens() {
+        return promptTokens.get();
+    }
+
+    public int getCompletionTokens() {
+        return completionTokens.get();
+    }
 
     public AgentContext(Integer userId) {
         this.userId = userId;

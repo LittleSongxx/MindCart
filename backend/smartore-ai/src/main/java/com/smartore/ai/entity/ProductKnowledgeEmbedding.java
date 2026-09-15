@@ -18,6 +18,8 @@ public class ProductKnowledgeEmbedding {
     private String chunkTitle;
     private String chunkContent;
     private Double similarityScore;
+    /** 是否被 BM25 关键词通道命中（混合检索的展示/门控信号，不落库） */
+    private Boolean keywordHit;
 
     public Integer getId() {
         return id;
@@ -141,6 +143,14 @@ public class ProductKnowledgeEmbedding {
 
     public Double getSimilarityScore() {
         return similarityScore;
+    }
+
+    public Boolean getKeywordHit() {
+        return keywordHit;
+    }
+
+    public void setKeywordHit(Boolean keywordHit) {
+        this.keywordHit = keywordHit;
     }
 
     public void setSimilarityScore(Double similarityScore) {

@@ -128,14 +128,14 @@ class AgentExecutorTest {
         when(agentRunService.startGuideRun(task)).thenReturn(run());
         when(agentStepService.startStep(any(), anyInt(), any(), any(), any(), any())).thenReturn(new AgentStep());
         AtomicInteger round = new AtomicInteger();
-        when(aiChatService.chatCompletion(any(), any())).thenAnswer(inv -> {
+        when(aiChatService.chatCompletionWithUsage(any(), any())).thenAnswer(inv -> {
             if (round.getAndIncrement() == 0) {
                 // 第一轮：检索候选（注册表为空 → 返回未知工具，验证分发兜底）
-                return assistantWithCalls(toolCall("unknown_tool", "{}"));
+                return new AiChatService.ChatCompletionResult(assistantWithCalls(toolCall("unknown_tool", "{}")), 100, 20);
             }
             // 第二轮：提交推荐（在售有货 + 无货商品各一个，无货的必须被剔除）
-            return assistantWithCalls(toolCall("submit_recommendations",
-                    "{\"items\":[{\"productId\":1,\"reason\":\"便宜\"},{\"productId\":2,\"reason\":\"没货\"}]}"));
+            return new AiChatService.ChatCompletionResult(assistantWithCalls(toolCall("submit_recommendations",
+                    "{\"items\":[{\"productId\":1,\"reason\":\"便宜\"},{\"productId\":2,\"reason\":\"没货\"}]}")), 100, 20);
         });
         when(goodsClient.getProducts(any())).thenReturn(Result.success(List.of(
                 product(1, "考研词汇", 5, "ON_SALE"),
@@ -163,7 +163,8 @@ class AgentExecutorTest {
         when(agentRunService.startGuideRun(task)).thenReturn(run());
         JSONObject plain = new JSONObject();
         plain.set("content", "我直接回答");
-        when(aiChatService.chatCompletion(any(), any())).thenReturn(plain);
+        when(aiChatService.chatCompletionWithUsage(any(), any()))
+                .thenReturn(new AiChatService.ChatCompletionResult(plain, 50, 10));
 
         executor.execute(task);
 

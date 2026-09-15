@@ -3,6 +3,8 @@ package com.smartore.ai.entity;
 public class ShoppingQaRequest {
 
     private Integer userId;
+    private Integer conversationId;
+    private Integer roundNo;
     private String questionType;
     private String questionText;
     private Integer productId;
@@ -64,5 +66,21 @@ public class ShoppingQaRequest {
 
     public void setOrderNo(String orderNo) {
         this.orderNo = orderNo;
+    }
+
+    public Integer getConversationId() {
+        return conversationId;
+    }
+
+    public void setConversationId(Integer conversationId) {
+        this.conversationId = conversationId;
+    }
+
+    public Integer getRoundNo() {
+        return roundNo;
+    }
+
+    public void setRoundNo(Integer roundNo) {
+        this.roundNo = roundNo;
     }
 }

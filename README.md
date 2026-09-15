@@ -39,6 +39,9 @@ AI 电商全链路项目：**Spring Cloud 五服务微服务底座 + Vue 3 前�
 | 001 | 服务边界与 api/app 契约分层 | 高内聚低耦合；跨库 JOIN 全部消灭，改为服务层批量回填 |
 | 002 | Saga + 幂等步骤 + Outbox + 恢复任务（**不用 Seata**） | 热点行无全局锁、无协调器单点、每步留痕即对账数据源 |
 | 003 | 导购 Agent 走 MQ 异步执行 | 多轮 LLM 不再阻塞 HTTP；任务表即可靠队列，超时兜底重发 |
+| 007 | 混合检索 BM25+RRF | 编号/型号字面查询是稠密向量盲区（真实检索缺陷） |
+| 008 | QA 流式 SSE + 多轮会话 | H3 题族「输入到前端流式链路」；连接不是任务状态 |
+| 010 | 评测 v1 确定性断言 | 改提示词/换模型从盲飞变成有回归数字；评测器自身校准两次 |
 | 004 | 网关集中式 RBAC 规则表 | 鉴权单点化、规则可审计；服务侧信任头 + 内部令牌防绕过 |
 | 005 | RAG 资产归 AI 服务 | 知识/切片/向量与模型配置同域，依赖方向保持无环 |
 
@@ -65,7 +68,10 @@ docker compose -f ops/monitoring/compose.monitoring.yaml up -d   # Prometheus + 
 模型 Key：写入 `run/runtime.env` 的 `SMARTORE_CHAT_API_KEY` / `SMARTORE_EMBED_API_KEY`，
 启动时自动加密落库（AES-GCM，密钥不出环境变量；管理界面只见 `sk-****末4位`）。
 
-## 验证记录（本地 mall 栈实测）
+## 验证记录（本地 mall 栈实测，docs/evidence.md 有完整台账）
+
+- 混合检索：BM25+RRF（mode 参数 A/B 对照）；SSE 流式 delta 实测；评测 v1 首跑抓出 2 个真 Bug
+  （无关键词检索空转 → 召回放宽；materialize 缺预算硬校验 → 补确定性防线）——评测的回归价值已兑现
 
 - 交易链路：下单收敛 PAID ✓ requestId 幂等重放 ✓ 库存原子扣减/回补 ✓ 取消退款金额精确 ✓ 重复取消不双退款 ✓
 - 并发防超卖：库存 3、两用户并发抢购各 2 件 → 恰 1 单成功、库存精确（Testcontainers 单测固化）

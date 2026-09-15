@@ -16,6 +16,9 @@
             <if test="categoryId != null"> and p.category_id = #{categoryId}</if>
             <if test="brandId != null"> and p.brand_id = #{brandId}</if>
             <if test="status != null"> and p.status = #{status}</if>
+            <!-- 内部检索（AI 候选召回）以 price 作为价格上限：过滤必须在分页前，
+                 否则按 sort 排序首页全为贵价商品，页内过滤后空集（评测 v1 抓出） -->
+            <if test="price != null"> and p.price &lt;= #{price}</if>
             <if test="isRecommend != null"> and p.is_recommend = #{isRecommend}</if>
         </where>
         order by p.sort asc, p.id desc

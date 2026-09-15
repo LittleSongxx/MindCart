@@ -64,6 +64,11 @@ public class AgentRunService {
     // 的 message 往往上千字，直接写库会触发 Data too long 报错
     private static final int MAX_ERROR_MESSAGE_LENGTH = 500;
 
+    /** 失败路径保留已累计 token 用量 */
+    public void updateRunTokens(AgentRun agentRun) {
+        agentRunMapper.updateById(agentRun);
+    }
+
     public void failGuideRun(AgentRun agentRun, String errorMessage) {
         if (ObjectUtil.isNull(agentRun) || ObjectUtil.isEmpty(agentRun.getId())) {
             return;

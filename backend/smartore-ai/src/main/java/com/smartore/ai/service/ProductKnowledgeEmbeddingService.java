@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,6 +56,8 @@ public class ProductKnowledgeEmbeddingService {
     private StringRedisTemplate redisTemplate;
     @Resource
     private com.smartore.goods.api.GoodsFeignClient goodsClient;
+    @Resource
+    private HybridRetrievalService hybridRetrieval;
 
     /** 供 EmbeddingJobConsumer 调用的执行体：跑全量并向 Redis 写进度 */
     public void runGenerateAll() {
@@ -166,10 +169,48 @@ public class ProductKnowledgeEmbeddingService {
             double score = cosine(queryVector, parseVector(embedding.getVectorText()));
             embedding.setSimilarityScore(Math.round(score * 10000.0) / 10000.0);
         }
-        return embeddings.stream()
+        // 稠密通道排名（所有候选都已算出余弦分）
+        List<ProductKnowledgeEmbedding> denseRanked = embeddings.stream()
                 .sorted(Comparator.comparing(ProductKnowledgeEmbedding::getSimilarityScore).reversed())
-                .limit(topK)
                 .toList();
+
+        boolean hybrid = !"dense".equalsIgnoreCase(request.getMode());
+        if (!hybrid) {
+            return denseRanked.stream().limit(topK).toList();
+        }
+
+        // 关键词通道：BM25 对「编号/型号/数字」类字面查询敏感，补稠密向量的盲区（ADR-007）
+        Map<Integer, String> chunkTexts = new java.util.HashMap<>();
+        Map<Integer, ProductKnowledgeEmbedding> byChunkId = new java.util.HashMap<>();
+        for (ProductKnowledgeEmbedding embedding : embeddings) {
+            byChunkId.putIfAbsent(embedding.getChunkId(), embedding);
+        }
+        if (!byChunkId.isEmpty()) {
+            ProductKnowledgeChunk chunkCondition = new ProductKnowledgeChunk();
+            chunkCondition.setChunkStatus("READY");
+            for (ProductKnowledgeChunk chunk : chunkMapper.selectAll(chunkCondition)) {
+                ProductKnowledgeEmbedding owner = byChunkId.get(chunk.getId());
+                if (owner != null) {
+                    chunkTexts.put(chunk.getId(), chunk.getChunkTitle() + " " + chunk.getChunkContent());
+                }
+            }
+        }
+        List<Integer> keywordRanked = hybridRetrieval.bm25Rank(queryText, chunkTexts);
+        java.util.Set<Integer> keywordTopChunkIds = new java.util.HashSet<>(keywordRanked.stream().limit(5).toList());
+
+        // RRF 融合两路名次（分数不可比，只融排名）
+        Map<Integer, ProductKnowledgeEmbedding> idMap = new java.util.HashMap<>();
+        for (ProductKnowledgeEmbedding embedding : embeddings) {
+            idMap.put(embedding.getId(), embedding);
+        }
+        List<ProductKnowledgeEmbedding> fused = hybridRetrieval.rrfFuse(
+                denseRanked.stream().map(ProductKnowledgeEmbedding::getId).toList(),
+                keywordRanked.stream().map(id -> byChunkId.get(id).getId()).toList()
+        ).stream().map(idMap::get).toList();
+        for (ProductKnowledgeEmbedding embedding : fused) {
+            embedding.setKeywordHit(keywordTopChunkIds.contains(embedding.getChunkId()));
+        }
+        return fused.stream().limit(topK).toList();
     }
 
     /** 指定商品时把商品名拼进查询，保证查询与切片在同一语境（切片内容以商品名开头） */

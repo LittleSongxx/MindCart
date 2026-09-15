@@ -5,6 +5,8 @@ public class ShoppingQa {
     private Integer id;
     private String qaNo;
     private Integer userId;
+    private Integer conversationId;
+    private Integer roundNo;
     private String questionType;
     private String questionText;
     private Integer productId;
@@ -145,5 +147,21 @@ public class ShoppingQa {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public Integer getConversationId() {
+        return conversationId;
+    }
+
+    public void setConversationId(Integer conversationId) {
+        this.conversationId = conversationId;
+    }
+
+    public Integer getRoundNo() {
+        return roundNo;
+    }
+
+    public void setRoundNo(Integer roundNo) {
+        this.roundNo = roundNo;
     }
 }

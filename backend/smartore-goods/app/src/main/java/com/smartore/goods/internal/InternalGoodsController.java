@@ -70,18 +70,28 @@ public class InternalGoodsController {
     public Result<List<ProductVO>> searchOnSale(@RequestParam(required = false) String keyword,
                                                 @RequestParam(required = false) BigDecimal maxPrice,
                                                 @RequestParam(defaultValue = "8") Integer limit) {
+        List<ProductVO> result = searchOnSalePage(keyword, maxPrice, limit);
+        // 召回放宽：关键词无命中时回退为「无关键词+价格上限」再检索一次。
+        // 真实 badcase：需求只给预算不给品类（"预算300推荐个实用商品"），模型只能猜关键词，
+        // name LIKE 猜不中就整场空手（评测 v1 抓出）。
+        if (result.isEmpty() && keyword != null && !keyword.isBlank()) {
+            result = searchOnSalePage(null, maxPrice, limit);
+        }
+        return Result.success(result);
+    }
+
+    /** 价格上限条件下沉到 SQL（分页前过滤），避免按 sort 排序的首页全为贵价商品导致页内过滤空集 */
+    private List<ProductVO> searchOnSalePage(String keyword, java.math.BigDecimal maxPrice, Integer limit) {
         Product condition = new Product();
         condition.setStatus("ON_SALE");
         if (keyword != null && !keyword.isBlank()) {
             condition.setName(keyword);
         }
-        // 分页只取一页，用 PageHelper 控制返回量，避免全表载入
+        if (maxPrice != null) {
+            condition.setPrice(maxPrice);
+        }
         PageHelper.startPage(1, Math.max(1, Math.min(limit == null ? 8 : limit, 50)));
-        List<ProductVO> result = productMapper.selectAll(condition).stream()
-                .filter(p -> maxPrice == null || p.getPrice() == null || p.getPrice().compareTo(maxPrice) <= 0)
-                .map(this::toVO)
-                .toList();
-        return Result.success(result);
+        return productMapper.selectAll(condition).stream().map(this::toVO).toList();
     }
 
     @PostMapping("/product/batch")

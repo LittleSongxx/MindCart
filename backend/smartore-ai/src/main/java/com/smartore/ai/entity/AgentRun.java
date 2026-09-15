@@ -14,6 +14,8 @@ public class AgentRun {
     private String inputSnapshot;
     private String outputSummary;
     private String errorMessage;
+    private Integer promptTokens;
+    private Integer completionTokens;
     private String startTime;
     private String endTime;
     private Long durationMs;
@@ -110,6 +112,22 @@ public class AgentRun {
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public Integer getPromptTokens() {
+        return promptTokens;
+    }
+
+    public void setPromptTokens(Integer promptTokens) {
+        this.promptTokens = promptTokens;
+    }
+
+    public Integer getCompletionTokens() {
+        return completionTokens;
+    }
+
+    public void setCompletionTokens(Integer completionTokens) {
+        this.completionTokens = completionTokens;
     }
 
     public void setErrorMessage(String errorMessage) {

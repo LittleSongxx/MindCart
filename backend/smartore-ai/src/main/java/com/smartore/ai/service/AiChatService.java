@@ -163,6 +163,42 @@ public class AiChatService {
     }
 
     /**
+     * 流式对话：增量文本通过 onDelta 回调（SSE 转发的数据源），返回完整文本。
+     * 只用于展示层体验；结构化/工具链路仍走非流式（半个 JSON 无法做完整校验）。
+     */
+    public String chatStream(AiModelConfig config, String systemPrompt, String userPrompt,
+                             java.util.function.Consumer<String> onDelta) {
+        long start = System.nanoTime();
+        OpenAiChatModel chatModel = springAiModelFactory.getChatModel(config);
+        try {
+            StringBuilder full = new StringBuilder();
+            ChatClient.create(chatModel).prompt()
+                    .system(StrUtil.nullToEmpty(systemPrompt))
+                    .user(userPrompt)
+                    .stream()
+                    .content()
+                    .doOnNext(chunk -> {
+                        full.append(chunk);
+                        if (onDelta != null) {
+                            onDelta.accept(chunk);
+                        }
+                    })
+                    .blockLast();
+            Timer.builder("smartore.llm.call")
+                    .tag("kind", "chat_stream").tag("model", config.getModelName()).tag("outcome", "success")
+                    .register(meterRegistry)
+                    .record(System.nanoTime() - start, java.util.concurrent.TimeUnit.NANOSECONDS);
+            return full.toString();
+        } catch (RuntimeException e) {
+            Timer.builder("smartore.llm.call")
+                    .tag("kind", "chat_stream").tag("model", config.getModelName()).tag("outcome", "error")
+                    .register(meterRegistry)
+                    .record(System.nanoTime() - start, java.util.concurrent.TimeUnit.NANOSECONDS);
+            throw new CustomException("500", "调用对话模型失败：" + describeModelError(e));
+        }
+    }
+
+    /**
      * 用指定的向量模型配置，把一段文本转成向量（OpenAI 兼容 /embeddings 接口）。
      * 供商品知识库切片向量化和检索时调用。
      *
@@ -205,11 +241,20 @@ public class AiChatService {
      * @return 助手消息 JSONObject（可能含 content 或 tool_calls）
      */
     public JSONObject chatCompletion(JSONArray messages, JSONArray tools) {
+        return chatCompletionWithUsage(messages, tools).getMessage();
+    }
+
+    /**
+     * Agent 主通道：返回助手消息 + 本次 token 用量（成本归因数据源）。
+     * 容错口径（ADR-008）：网络异常/超时/429/5xx 属瞬时错误，指数退避重试至多 2 次；
+     * 4xx（参数/鉴权类）立即失败——重试解决不了配置问题，重试只会烧钱。
+     */
+    public ChatCompletionResult chatCompletionWithUsage(JSONArray messages, JSONArray tools) {
         AiModelConfig configPreview = resolveEnabledConfig("CHAT");
         return timed("agent", configPreview.getModelName(), () -> chatCompletionInner(messages, tools));
     }
 
-    private JSONObject chatCompletionInner(JSONArray messages, JSONArray tools) {
+    private ChatCompletionResult chatCompletionInner(JSONArray messages, JSONArray tools) {
         AiModelConfig config = resolveEnabledConfig("CHAT");
         String url = buildChatUrl(config.getBaseUrl());
         JSONObject body = new JSONObject();
@@ -228,17 +273,7 @@ public class AiChatService {
         }
         body.set("stream", false);
 
-        HttpResponse response;
-        try {
-            response = HttpRequest.post(url)
-                    .header("Authorization", "Bearer " + config.getApiKey())
-                    .header("Content-Type", "application/json")
-                    .body(body.toString())
-                    .timeout(60000)
-                    .execute();
-        } catch (Exception e) {
-            throw new CustomException("500", "调用AI模型失败，请检查 Base URL 是否可访问：" + e.getMessage());
-        }
+        HttpResponse response = executeWithRetry(url, body.toString(), config.getApiKey());
         String responseBody = response.body();
         if (!response.isOk()) {
             throw new CustomException("500", "AI模型返回错误（HTTP " + response.getStatus() + "）：" + StrUtil.brief(responseBody, 300));
@@ -249,11 +284,76 @@ public class AiChatService {
             if (choices == null || choices.isEmpty()) {
                 throw new CustomException("500", "AI模型返回内容为空：" + StrUtil.brief(responseBody, 300));
             }
-            return choices.getJSONObject(0).getJSONObject("message");
+            JSONObject usage = json.getJSONObject("usage");
+            int promptTokens = usage == null ? 0 : usage.getInt("prompt_tokens", 0);
+            int completionTokens = usage == null ? 0 : usage.getInt("completion_tokens", 0);
+            if (meterRegistry != null) {
+                meterRegistry.counter("smartore.llm.tokens", "type", "prompt").increment(promptTokens);
+                meterRegistry.counter("smartore.llm.tokens", "type", "completion").increment(completionTokens);
+            }
+            return new ChatCompletionResult(choices.getJSONObject(0).getJSONObject("message"),
+                    promptTokens, completionTokens);
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
             throw new CustomException("500", "解析AI模型返回失败：" + e.getMessage());
+        }
+    }
+
+    /** 瞬时错误重试：仅网络异常/超时/429/5xx 重试，退避 500ms×attempt，最多 2 次重试 */
+    private HttpResponse executeWithRetry(String url, String body, String apiKey) {
+        RuntimeException last = null;
+        for (int attempt = 0; attempt <= 2; attempt++) {
+            if (attempt > 0) {
+                try {
+                    Thread.sleep(500L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new CustomException("500", "调用AI模型被中断");
+                }
+            }
+            try {
+                HttpResponse response = HttpRequest.post(url)
+                        .header("Authorization", "Bearer " + apiKey)
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .timeout(60000)
+                        .execute();
+                int status = response.getStatus();
+                if (status == 429 || status >= 500) {
+                    last = new CustomException("500", "AI模型瞬时错误（HTTP " + status + "）：" + StrUtil.brief(response.body(), 200));
+                    continue;
+                }
+                return response;
+            } catch (cn.hutool.core.io.IORuntimeException e) {
+                last = new CustomException("500", "调用AI模型网络异常：" + e.getMessage());
+            }
+        }
+        throw last != null ? last : new CustomException("500", "调用AI模型失败");
+    }
+
+    /** chatCompletion 结果载体：助手消息 + token 用量 */
+    public static class ChatCompletionResult {
+        private final JSONObject message;
+        private final int promptTokens;
+        private final int completionTokens;
+
+        public ChatCompletionResult(JSONObject message, int promptTokens, int completionTokens) {
+            this.message = message;
+            this.promptTokens = promptTokens;
+            this.completionTokens = completionTokens;
+        }
+
+        public JSONObject getMessage() {
+            return message;
+        }
+
+        public int getPromptTokens() {
+            return promptTokens;
+        }
+
+        public int getCompletionTokens() {
+            return completionTokens;
         }
     }
 

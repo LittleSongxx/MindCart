@@ -24,6 +24,8 @@
             <if test="id != null">id,</if>
             <if test="qaNo != null">qa_no,</if>
             <if test="userId != null">user_id,</if>
+            <if test="conversationId != null">conversation_id,</if>
+            <if test="roundNo != null">round_no,</if>
             <if test="questionType != null">question_type,</if>
             <if test="questionText != null">question_text,</if>
             <if test="productId != null">product_id,</if>
@@ -41,6 +43,8 @@
             <if test="id != null">#{id},</if>
             <if test="qaNo != null">#{qaNo},</if>
             <if test="userId != null">#{userId},</if>
+            <if test="conversationId != null">#{conversationId},</if>
+            <if test="roundNo != null">#{roundNo},</if>
             <if test="questionType != null">#{questionType},</if>
             <if test="questionText != null">#{questionText},</if>
             <if test="productId != null">#{productId},</if>
