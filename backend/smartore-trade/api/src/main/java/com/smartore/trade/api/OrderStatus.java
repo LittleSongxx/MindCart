@@ -10,6 +10,8 @@ import java.util.Set;
  *   失败            取消(先占位)
  *     ▼               ▼
  *  PAY_FAILED      CANCELLING ──补偿完成──▶ CANCELLED
+ *     │
+ *     └─迟到的扣款已反向退款──▶ CANCELLED（恢复任务兜底，正常应为空集）
  *
  * 转移一律用条件 UPDATE（where status = 期望前态）落库，影响行数为 0 即并发冲突，
  * 杜绝单体版"先查后改"造成的双退款/双发货。
@@ -40,6 +42,7 @@ public enum OrderStatus {
             case PAID -> target == SHIPPED || target == CANCELLING;
             case SHIPPED -> target == COMPLETED;
             case CANCELLING -> target == CANCELLED;
+            case PAY_FAILED -> target == CANCELLED; // 恢复任务：迟到扣款反向退款后的收口
             default -> false;
         };
     }

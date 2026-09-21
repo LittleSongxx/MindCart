@@ -23,6 +23,11 @@ public interface OrderFeignClient {
     Result<List<OrderBriefVO>> recentOfUser(@PathVariable("userId") Integer userId,
                                             @RequestParam(value = "limit", defaultValue = "5") Integer limit);
 
+    /** 最近已购商品 ID（去重、新单在前）：smartore-voice 的历史订单画像回流用 */
+    @GetMapping("/internal/order/recent-product-ids/{userId}")
+    Result<List<Integer>> recentProductIds(@PathVariable("userId") Integer userId,
+                                           @RequestParam(value = "limit", defaultValue = "5") Integer limit);
+
     /** 按订单号查订单（订单问答） */
     @GetMapping("/internal/order/by-no/{orderNo}")
     Result<OrderBriefVO> byOrderNo(@PathVariable("orderNo") String orderNo);
@@ -31,6 +36,12 @@ public interface OrderFeignClient {
     @GetMapping("/internal/order/owns-product")
     Result<Boolean> ownsProduct(@RequestParam("userId") Integer userId,
                                 @RequestParam("productId") Integer productId);
+
+    /** 评价资格校验（精确版）：订单行属于该用户且行内是指定商品（防冒名/占位评价） */
+    @GetMapping("/internal/order/owns-order-item")
+    Result<Boolean> ownsOrderItem(@RequestParam("userId") Integer userId,
+                                  @RequestParam("orderItemId") Integer orderItemId,
+                                  @RequestParam("productId") Integer productId);
 
     /** 全店订单统计（非取消订单数与销售额，成长报告用） */
     @GetMapping("/internal/order/stats-all")

@@ -24,7 +24,8 @@
 1. **原子层**：`UPDATE stock SET available=available-? WHERE available>=?`、
    `UPDATE user SET balance=balance-? WHERE balance>=?` —— 数据库条件更新兜底。
 2. **幂等层**：所有远程步骤以 orderNo 为幂等键（INSERT IGNORE 流水先占位，占住才动钱/货）；
-   下单 requestId 唯一 + requestHash（同请求重放返回原订单，异内容 409）；
+   下单 requestId 唯一 + requestHash（指纹=userId+收货人三要素；购物车属服务端状态且下单后即清空，
+   不参与指纹。同 requestId 重放返回原订单，收货信息不同则 409）；
    订单状态机全条件转移（`WHERE status=期望前态`，影响行数=0 即并发冲突）。
 3. **对账层**：事件 Outbox（与状态变更加同事务）→ RabbitMQ quorum+DLX → ai 镜像；
    `ops/recon.sh` 逐单核对六组不变量。

@@ -48,8 +48,11 @@ public class SearchCandidateProductsTool implements AgentTool {
     public String execute(JSONObject arguments, AgentContext context) {
         String keyword = arguments.getStr("keyword");
         BigDecimal maxPrice = arguments.getBigDecimal("maxPrice");
-        List<ProductVO> products = unwrap(goodsClient.searchOnSale(
-                keyword == null || keyword.isBlank() ? null : keyword, maxPrice, 8));
+        if (keyword == null || keyword.isBlank()) {
+            // 空关键词会触发"全量在售前 8 条"的劣化检索（评测 v1 抓过的缺陷），参数级直接拦下
+            return "关键词为空：请先从用户需求里提取商品关键词（如品类/型号/卖点）再检索。";
+        }
+        List<ProductVO> products = unwrap(goodsClient.searchOnSale(keyword, maxPrice, 8));
         if (products.isEmpty()) {
             return "未检索到符合条件的上架商品。";
         }

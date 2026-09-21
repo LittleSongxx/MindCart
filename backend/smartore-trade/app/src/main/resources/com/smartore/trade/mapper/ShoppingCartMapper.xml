@@ -3,26 +3,14 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smartore.trade.mapper.ShoppingCartMapper">
 
-    <select id="selectAll" resultType="com.smartore.trade.entity.ShoppingCart">
-        <!-- 联商品表带出名称/编号/图片/价格/上架状态和库存，供购物车列表展示和下单前校验 -->
-        select sc.*, p.name as product_name, p.product_no, p.cover_image, p.price, p.status,
-               p.stock_quantity
-        from shopping_cart sc
-        left join product p on sc.product_id = p.id
-        <where>
-            <if test="userId != null"> and sc.user_id = #{userId}</if>
-            <if test="productId != null"> and sc.product_id = #{productId}</if>
-            <if test="productName != null"> and p.name like concat('%', #{productName}, '%')</if>
-        </where>
-        order by sc.id desc
-    </select>
-
+    <!-- 商品展示信息由服务层经 goods 服务实时回填（selectMine），购物车表只存自有列；
+         旧版 selectAll 曾 left join product（跨库），已随死代码一并移除 -->
     <delete id="deleteById">
         delete from shopping_cart
         where id = #{id}
     </delete>
 
-    <insert id="insert" parameterType="com.smartore.trade.entity.ShoppingCart" useGeneratedKeys="true">
+    <insert id="insert" parameterType="com.smartore.trade.entity.ShoppingCart" useGeneratedKeys="true" keyProperty="id">
         insert into shopping_cart
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="id != null">id,</if>

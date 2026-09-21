@@ -46,26 +46,45 @@ public class ShoppingQaController {
 
     /**
      * 流式问答（SSE）：增量文本以 delta 事件推送，complete 事件携带完整 QA 实体（含 conversationId）。
-     * 事件类型约定：delta=文本增量 / complete=最终结果 / error=失败原因。
+     * 事件类型约定：delta=文本增量 / complete=最终结果 / error=失败原因 /（注释行=心跳）。
      */
     @GetMapping(value = "/askStream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter askStream(@RequestParam Integer userId,
+    public SseEmitter askStream(@RequestParam(required = false) Integer userId,
                                 @RequestParam String questionType,
                                 @RequestParam String questionText,
                                 @RequestParam(required = false) Integer productId,
                                 @RequestParam(required = false) String productName,
-                                @RequestParam(required = false) Integer conversationId) {
+                                @RequestParam(required = false) Integer conversationId,
+                                jakarta.servlet.http.HttpServletResponse response) {
+        // 身份必须在容器线程内取（异步体里 UserContext 已被过滤器清理）；
+        // 客户端传的 userId 参数不信任，一律以网关注入的当前用户为准
+        Integer currentUserId = com.smartore.common.context.UserContext.requireUserId();
         SseEmitter emitter = new SseEmitter(120_000L);
+        // 反代（nginx）默认缓冲响应会杀死"流式"——该响应头让本连接逐段透传
+        response.setHeader("X-Accel-Buffering", "no");
+
         ShoppingQaRequest request = new ShoppingQaRequest();
-        request.setUserId(userId);
+        request.setUserId(currentUserId);
         request.setQuestionType(questionType);
         request.setQuestionText(questionText);
         request.setProductId(productId);
         request.setProductName(productName);
         request.setConversationId(conversationId);
-        // SSE 工作线程独立于容器线程：LLM 生成可达数十秒
-        java.util.concurrent.ExecutorService streamExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
-        streamExecutor.submit(() -> {
+
+        // 心跳：首 delta 前的检索阶段可达数十秒，无字节流动会被反代/浏览器空闲超时掐断。
+        // 注释行对 EventSource 透明，只用于保活。
+        final java.util.concurrent.ScheduledFuture<?> heartbeat = HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
+            try {
+                emitter.send(SseEmitter.event().comment("ping"));
+            } catch (Exception heartbeatStopped) {
+                // 发送失败即连接已断，心跳由 onCompletion 取消
+            }
+        }, 15, 15, java.util.concurrent.TimeUnit.SECONDS);
+        Runnable stopHeartbeat = () -> heartbeat.cancel(false);
+        emitter.onCompletion(stopHeartbeat);
+        emitter.onTimeout(stopHeartbeat);
+
+        STREAM_EXECUTOR.submit(() -> {
             try {
                 ShoppingQa qa = shoppingQaService.ask(request, chunk -> {
                     try {
@@ -83,12 +102,26 @@ public class ShoppingQaController {
                 } catch (Exception ignored) {
                 }
                 emitter.completeWithError(e);
-            } finally {
-                streamExecutor.shutdown();
             }
         });
         return emitter;
     }
+
+    /** SSE 长任务共享线程池（daemon）：每请求新建线程池属高开销模式 */
+    private static final java.util.concurrent.ExecutorService STREAM_EXECUTOR =
+            java.util.concurrent.Executors.newCachedThreadPool(r -> {
+                Thread t = new Thread(r, "qa-sse-worker");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /** 心跳调度器（daemon，全局共享） */
+    private static final java.util.concurrent.ScheduledExecutorService HEARTBEAT_SCHEDULER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "qa-sse-heartbeat");
+                t.setDaemon(true);
+                return t;
+            });
 
     /** 我的会话列表（多轮上下文入口） */
     @GetMapping("/conversations")

@@ -45,7 +45,8 @@ public class GuideTaskConsumer {
         try {
             taskId = Integer.valueOf(taskIdText.trim());
         } catch (NumberFormatException e) {
-            log.error("导购任务消息格式非法，进死信：{}", taskIdText);
+            // 毒丸消息：直接 ack 丢弃（requeue 只会无限重放；任务表才是真源，消息只是触发器）
+            log.error("导购任务消息格式非法，已丢弃（不会进死信队列）：{}", taskIdText);
             channel.basicAck(deliveryTag, false);
             return;
         }
@@ -84,8 +85,10 @@ public class GuideTaskConsumer {
     }
 
     /**
-     * 兜底：WAITING 超 90 秒重新入队；RUNNING 超 10 分钟重置为 WAITING 重发
-     * （消费者宕机/执行线程挂死时任务不至于永远停留中间态 —— 重放安全：新一轮执行会新建 AgentRun）
+     * 兜底：WAITING 超 90 秒重新入队；RUNNING 超时重置为 WAITING 重发
+     * （消费者宕机/执行线程挂死时任务不至于永远停留中间态——重放安全：新一轮执行会新建 AgentRun）。
+     * RUNNING 阈值必须覆盖 Agent 最坏耗时：10 轮 × LLM 60s × 3 次重试 ≈ 30 分钟，
+     * 取 35 分钟；阈值小于最坏耗时时，兜底重发会与仍在执行的消费者并发双跑。
      */
     @Scheduled(fixedDelay = 30000)
     public void rescueStaleWaitingTasks() {
@@ -93,7 +96,7 @@ public class GuideTaskConsumer {
             log.warn("导购任务兜底重发（taskId={}，taskNo={}）", task.getId(), task.getTaskNo());
             publisher.publish(task.getId());
         }
-        for (ShoppingGuideTask task : taskMapper.selectStaleByStatus("RUNNING", 600)) {
+        for (ShoppingGuideTask task : taskMapper.selectStaleByStatus("RUNNING", 2100)) {
             log.warn("导购任务 RUNNING 超时，重置重发（taskId={}）", task.getId());
             task.setStatus("WAITING");
             task.setUpdateTime(cn.hutool.core.date.DateUtil.now());

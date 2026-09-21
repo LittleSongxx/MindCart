@@ -13,6 +13,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,8 @@ public class ProductKnowledgeChunkService {
         return saveChunks(knowledge);
     }
 
+    /** 全量重建是"清空旧向量/切片 + 重写"的多语句操作，必须原子 */
+    @Transactional
     public int generateAll() {
         ProductKnowledge condition = new ProductKnowledge();
         condition.setIsEnabled(1);

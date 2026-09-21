@@ -2,6 +2,15 @@
 name: mall
 
 services:
+  mall-alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: mall-alertmanager
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3993:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
   mall-prometheus:
     image: prom/prometheus:v3.13.2
     container_name: mall-prometheus
@@ -14,6 +23,8 @@ services:
       - mall-prometheus-data:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - mall-alertmanager
 
   mall-grafana:
     image: grafana/grafana:13.1.3

@@ -73,6 +73,8 @@ public class SpringAiModelFactory {
      * 构造 OpenAiApi。
      * 表里的 base_url 允许写两种形式：写到 /v1 的短地址，或者带完整路径的长地址。
      * OpenAiApi 需要的是"主机 + 路径"分开的形式，所以这里把它拆开。
+     * 超时必须显式配置：RestClient/WebClient 默认无限超时，模型服务半开连接会把
+     * SSE 工作线程/HTTP 容器线程永久挂死（hutool 路径早有 timeout(60000)，这里补齐）。
      */
     private OpenAiApi buildApi(AiModelConfig config) {
         String rawUrl = config.getBaseUrl().trim();
@@ -80,11 +82,11 @@ public class SpringAiModelFactory {
         String completionsPath = "/v1/chat/completions";
         String embeddingsPath = "/v1/embeddings";
 
-        int pathIndex = rawUrl.indexOf("/v1");
-        if (pathIndex > 0) {
-            // 把 /v1 及其后面的部分当作路径，前面的部分当作主机
-            baseUrl = rawUrl.substring(0, pathIndex);
-            String path = rawUrl.substring(pathIndex);
+        // 只把独立的 /v1 段当路径起点：(?=/v1(/|$)) 不会误匹配 /v1beta 这类前缀
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?=/v1(?:/|$))").matcher(rawUrl);
+        if (matcher.find()) {
+            baseUrl = rawUrl.substring(0, matcher.start());
+            String path = rawUrl.substring(matcher.start());
             if (path.endsWith("/chat/completions")) {
                 completionsPath = path;
                 embeddingsPath = path.replace("/chat/completions", "/embeddings");
@@ -98,11 +100,29 @@ public class SpringAiModelFactory {
             }
         }
 
+        java.net.http.HttpClient jdkClient = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(java.time.Duration.ofSeconds(5))
+                .build();
+        // 同步调用（chat/embed）60s；流式 180s（长回答逐段产出，首字节后仍持续有数据）
+        org.springframework.http.client.JdkClientHttpRequestFactory syncFactory =
+                new org.springframework.http.client.JdkClientHttpRequestFactory(jdkClient);
+        syncFactory.setReadTimeout(java.time.Duration.ofSeconds(60));
+        org.springframework.web.client.RestClient.Builder restClientBuilder =
+                org.springframework.web.client.RestClient.builder().requestFactory(syncFactory);
+
+        org.springframework.http.client.reactive.JdkClientHttpConnector streamConnector =
+                new org.springframework.http.client.reactive.JdkClientHttpConnector(jdkClient);
+        streamConnector.setReadTimeout(java.time.Duration.ofSeconds(180));
+        org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder =
+                org.springframework.web.reactive.function.client.WebClient.builder().clientConnector(streamConnector);
+
         return OpenAiApi.builder()
                 .baseUrl(baseUrl)
                 .apiKey(config.getApiKey())
                 .completionsPath(completionsPath)
                 .embeddingsPath(embeddingsPath)
+                .restClientBuilder(restClientBuilder)
+                .webClientBuilder(webClientBuilder)
                 .build();
     }
 

@@ -31,7 +31,13 @@
       <el-button type="primary" @click="loadProducts">搜索</el-button>
     </section>
 
-    <el-empty v-if="!data.products.length" description="没有找到符合条件的商品" />
+    <!-- 搜索兜底：用户带着关键词来却没搜到，正是语音导购最能救场的场景（SEARCH_FALLBACK 渠道归因） -->
+    <div v-if="!data.products.length" class="search-fallback">
+      <el-empty description="没有找到符合条件的商品" />
+      <el-button type="primary" round @click="goVoiceFallback">
+        <el-icon style="margin-right: 4px"><Microphone /></el-icon>找不到？对 AI 说一句"{{ data.name || '我想要…' }}"
+      </el-button>
+    </div>
 
     <section class="product-grid" v-else>
       <div class="product-card" v-for="item in data.products" :key="item.id">
@@ -63,6 +69,7 @@
 import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { Microphone } from "@element-plus/icons-vue";
 import router from "@/router/index.js";
 
 const productSection = ref()
@@ -130,6 +137,14 @@ const loadProducts = () => {
       data.products = res.data || []
     }
   })
+}
+
+// 搜索无结果 → 语音导购兜底入口（SEARCH_FALLBACK 渠道归因），未登录先拦去登录页
+const goVoiceFallback = () => {
+  if (!checkLogin()) {
+    return
+  }
+  router.push({ path: '/front/guide', query: { mode: 'voice', channel: 'SEARCH_FALLBACK' } })
 }
 
 const addFavorite = (product) => {
@@ -254,6 +269,15 @@ loadProducts()
 
 .toolbar .el-select {
   width: 180px;
+}
+
+.search-fallback {
+  margin-top: 18px;
+  padding-bottom: 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .product-grid {

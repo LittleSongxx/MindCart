@@ -1,4 +1,4 @@
-# Smartore 监控采集：5 个 Java 服务（host 网络直连本机端口）+ 中间件 exporter 按需扩展
+# Smartore 监控采集：6 个 Java 服务（host 网络直连本机端口，含 voice/9105）+ 中间件 exporter 按需扩展
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -9,7 +9,7 @@ rule_files:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []   # 集群侧接入 Alertmanager 时填入
+        - targets: ['mall-alertmanager:9093']  # compose.monitoring.yaml 同栈部署
 
 scrape_configs:
   - job_name: smartore-gateway
@@ -27,3 +27,6 @@ scrape_configs:
   - job_name: smartore-ai
     metrics_path: /actuator/prometheus
     static_configs: [{ targets: ['host.docker.internal:9104'] }]
+  - job_name: smartore-voice
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['host.docker.internal:9105'] }]

@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import { globSync } from 'node:fs';
 
+const BASE = process.env.BASE || 'http://localhost:5173';
 const exe = process.env.HOME + '/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome';
 const results = [];
 const ok = (name, pass, detail = '') => { results.push([name, pass, detail]); console.log((pass ? 'PASS ' : 'FAIL ') + name + (detail ? ' | ' + detail : '')); };
@@ -9,7 +10,7 @@ const browser = await chromium.launch({ executablePath: exe, headless: true, arg
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 // 1. 打开首页 → 应重定向到登录页
-await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
 ok('首页可访问并跳登录页', page.url().includes('/login'), page.url());
 
 // 2. 登录 aaa/123
@@ -51,12 +52,12 @@ if (await qaInput.count() > 0) {
 await page.screenshot({ path: '/tmp/pwtest/product-detail.png', fullPage: false });
 
 // 7. 购物车加购 + 下单（交易链路走前端全流程）
-await page.goto('http://localhost:5173/front/home', { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/front/home`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
 const buyBtn = page.locator('button:has-text("加入购物车")').first();
 if (await buyBtn.count() > 0) {
   await buyBtn.click(); await page.waitForTimeout(1200);
-  await page.goto('http://localhost:5173/front/cart', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/front/cart`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
   const cartText = await page.locator('body').innerText();
   ok('购物车页面有商品', !cartText.includes('暂无数据') || cartText.includes('元'), '');

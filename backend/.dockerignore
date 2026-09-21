@@ -1,0 +1,15 @@
+# 构建上下文瘦身：镜像只 COPY 各模块 target 下的可执行 jar，
+# 源码/编译中间产物/original 备份/测试报告都不进上下文。
+**/src
+**/target/classes
+**/target/test-classes
+**/target/maven-status
+**/target/maven-archiver
+**/target/generated-sources
+**/target/generated-test-sources
+**/target/surefire-reports
+**/target/*.jar.original
+**/target/*-sources.jar
+**/target/*-javadoc.jar
+**/target/classes/**
+docker/

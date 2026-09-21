@@ -1,6 +1,7 @@
 package com.smartore.user.mapper;
 
 import com.smartore.user.entity.UserAddress;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -23,4 +24,7 @@ public interface UserAddressMapper {
 
     @Update("update user_address set is_default = 1, update_time = now() where id = #{id} and user_id = #{userId}")
     void setDefault(@Param("id") Integer id, @Param("userId") Integer userId);
+
+    @Delete("delete from user_address where user_id = #{userId}")
+    int deleteByUserId(Integer userId);
 }

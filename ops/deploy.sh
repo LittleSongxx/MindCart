@@ -14,12 +14,21 @@ install -d /opt/smartore/run
 [ -f "$ENV_FILE" ] || { echo "缺少 $ENV_FILE"; exit 1; }
 systemctl restart smartore-apps
 
-echo "[deploy] 健康门禁"
-ok=0
-for i in $(seq 1 60); do
-  code=$(curl -s -o /dev/null -w '%{http_code}' "$HEALTH_URL" || echo 000)
-  [ "$code" = "200" ] && { ok=1; break; }
-  sleep 5
+echo "[deploy] 健康门禁（全部 6 个服务，不只网关——否则后端起不来也能过 CI）"
+ok=1
+for url in http://127.0.0.1:9080/actuator/health http://127.0.0.1:9101/actuator/health \
+            http://127.0.0.1:9102/actuator/health http://127.0.0.1:9103/actuator/health \
+            http://127.0.0.1:9104/actuator/health http://127.0.0.1:9105/actuator/health; do
+  healthy=0
+  for i in $(seq 1 60); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || echo 000)
+    [ "$code" = "200" ] && { healthy=1; break; }
+    sleep 5
+  done
+  if [ "$healthy" != "1" ]; then
+    echo "健康门禁失败：$url（HTTP $code）"
+    ok=0
+  fi
 done
-[ "$ok" = "1" ] || { echo "健康门禁失败（HTTP $code）"; exit 1; }
-echo "[deploy] 网关健康 ✅"
+[ "$ok" = "1" ] || exit 1
+echo "[deploy] 六服务全部健康 ✅"

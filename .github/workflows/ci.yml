@@ -13,6 +13,7 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
+  # 只取消 CI（test/build），不取消部署：SSH 部署中途被打断会停在半部署状态
   cancel-in-progress: true
 
 jobs:
@@ -47,6 +48,9 @@ jobs:
     needs: [backend, web]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
     env:
       SSH_CMD: ssh -i ~/deploy_key -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10
     steps:

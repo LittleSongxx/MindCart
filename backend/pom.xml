@@ -25,6 +25,8 @@
     <module>smartore-goods</module>
     <module>smartore-trade</module>
     <module>smartore-ai</module>
+    <!-- 语音导购服务：新增互补，独立于 smartore-ai（ADR-0011） -->
+    <module>smartore-voice</module>
   </modules>
 
   <properties>

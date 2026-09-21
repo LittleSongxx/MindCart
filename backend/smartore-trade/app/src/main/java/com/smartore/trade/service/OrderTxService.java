@@ -34,17 +34,15 @@ public class OrderTxService {
     @Resource
     private TradeEventPublisher eventPublisher;
 
-    /** 本地事务①：订单(PAYING)+明细+清车+幂等占位（含 orderNo 回填） */
+    /** 本地事务①：订单(PAYING)+明细+清车+幂等占位（含 orderNo 回填）。
+     *  时间列不传值，由 DB CURRENT_TIMESTAMP 生成——停滞判定用 DB now() 比较，
+     *  写入也必须是同一时钟，应用/DB 时钟偏斜会把新订单误判成停滞单。 */
     @Transactional
     public void persistOrder(ShopOrder order, List<ShopOrderItem> items, List<ShoppingCart> cartList,
                              String requestId, String requestHash) {
-        String now = cn.hutool.core.date.DateUtil.now();
-        order.setCreateTime(now);
-        order.setUpdateTime(now);
         shopOrderMapper.insert(order);
         for (ShopOrderItem item : items) {
             item.setOrderId(order.getId());
-            item.setCreateTime(now);
             shopOrderItemMapper.insert(item);
         }
         shoppingCartMapper.deleteSelectedByIds(order.getUserId(),
@@ -94,5 +92,14 @@ public class OrderTxService {
         if (idempotency != null) {
             idempotencyMapper.updateStatus(idempotency.getRequestId(), "FAILED");
         }
+    }
+
+    /** 资错自愈收口：PAY_FAILED→CANCELLED + Outbox 事件（退款已在前置幂等步骤完成） */
+    @Transactional
+    public void finishCancelFromPayFailed(ShopOrder order, List<ShopOrderItem> items) {
+        if (shopOrderMapper.markCancelledFromPayFailed(order.getId()) == 0) {
+            return;
+        }
+        eventPublisher.append(TradeEventPayload.TYPE_ORDER_CANCELLED, order, items);
     }
 }

@@ -1,0 +1,57 @@
+{"id": "R01", "mode": "semantic", "query": "缓震效果好的跑鞋", "slots": null, "relevant": [1, 2, 4, 5, 8], "note": "cushion=high 的跑鞋，含越野款"}
+{"id": "R02", "mode": "semantic", "query": "专业越野跑鞋", "slots": null, "relevant": [8], "note": "唯一 trail"}
+{"id": "R03", "mode": "semantic", "query": "马拉松竞速跑鞋", "slots": null, "relevant": [3, 9], "note": "碳板竞速系"}
+{"id": "R04", "mode": "semantic", "query": "适合扁平足的跑鞋", "slots": null, "relevant": [4], "note": "描述明写扁平足"}
+{"id": "R05", "mode": "semantic", "query": "轻便的缓震跑鞋", "slots": null, "relevant": [5, 7], "note": "light 系"}
+{"id": "R06", "mode": "semantic", "query": "女生跑步穿的鞋", "slots": null, "relevant": [7], "note": "唯一女款跑鞋"}
+{"id": "R07", "mode": "semantic", "query": "机械手表", "slots": null, "relevant": [11, 14, 17, 18, 20], "note": "automatic 机芯"}
+{"id": "R08", "mode": "semantic", "query": "女士手表", "slots": null, "relevant": [15, 17], "note": "female"}
+{"id": "R09", "mode": "semantic", "query": "智能手表", "slots": null, "relevant": [16]}
+{"id": "R10", "mode": "semantic", "query": "潜水用的手表", "slots": null, "relevant": [18], "note": "潜水规格 200m 大表径"}
+{"id": "R11", "mode": "semantic", "query": "限量款手表", "slots": null, "relevant": [20]}
+{"id": "R12", "mode": "semantic", "query": "商务通勤的手表", "slots": null, "relevant": [19, 14], "note": "商务款/瑞表正装"}
+{"id": "R13", "mode": "semantic", "query": "降噪耳机", "slots": null, "relevant": [21, 22, 23], "note": "noise_cancel=high"}
+{"id": "R14", "mode": "semantic", "query": "超长续航的耳机", "slots": null, "relevant": [21, 24], "note": "30h/60h"}
+{"id": "R15", "mode": "semantic", "query": "平价入门蓝牙耳机", "slots": null, "relevant": [25]}
+{"id": "R16", "mode": "semantic", "query": "豆沙色口红", "slots": null, "relevant": [26]}
+{"id": "R17", "mode": "semantic", "query": "经典正红色口红", "slots": null, "relevant": [27]}
+{"id": "R18", "mode": "semantic", "query": "学生党平价口红", "slots": null, "relevant": [28], "note": "140 元奶茶色"}
+{"id": "R19", "mode": "semantic", "query": "复古红的哑光口红", "slots": null, "relevant": [29]}
+{"id": "R20", "mode": "semantic", "query": "番茄红显白的口红", "slots": null, "relevant": [30]}
+{"id": "F01", "mode": "filtered", "query": "500以内的跑鞋", "slots": {"category": "跑鞋", "budget": 500}, "relevant": [], "note": "全品类最便宜跑鞋599，预期空结果走放宽兜底"}
+{"id": "F02", "mode": "filtered", "query": "800以内的跑鞋", "slots": {"category": "跑鞋", "budget": 800}, "relevant": [6, 7]}
+{"id": "F03", "mode": "filtered", "query": "1000左右的跑鞋", "slots": {"category": "跑鞋", "budget": 1000}, "relevant": [1, 6, 7, 10]}
+{"id": "F04", "mode": "filtered", "query": "水泥路跑步穿的鞋", "slots": {"category": "跑鞋", "scenario": "水泥路"}, "relevant": [1, 2, 3, 4, 5, 6, 7, 9, 10], "note": "7 无 terrain 字段入围；8(trail) 被排除——cushion+terrain 联合过滤"}
+{"id": "F05", "mode": "filtered", "query": "跑越野", "slots": {"category": "跑鞋", "scenario": "越野"}, "relevant": [8]}
+{"id": "F06", "mode": "filtered", "query": "Nike的跑鞋", "slots": {"category": "跑鞋", "brand": "Nike"}, "relevant": [1, 6, 9], "note": "9号Vaporfly同为Nike——首轮标注遗漏，系统结果正确"}
+{"id": "F07", "mode": "filtered", "query": "2000以内的手表", "slots": {"category": "手表", "budget": 2000}, "relevant": [12, 15, 16]}
+{"id": "F08", "mode": "filtered", "query": "5000以内的手表", "slots": {"category": "手表", "budget": 5000}, "relevant": [11, 12, 13, 14, 15, 16, 17, 19]}
+{"id": "F09", "mode": "filtered", "query": "500以内的耳机", "slots": {"category": "耳机", "budget": 500}, "relevant": [25]}
+{"id": "F10", "mode": "filtered", "query": "200以内的口红", "slots": {"category": "口红", "budget": 200}, "relevant": [28]}
+{"id": "F11", "mode": "filtered", "query": "400以内的口红", "slots": {"category": "口红", "budget": 400}, "relevant": [26, 27, 28, 29, 30]}
+{"id": "F12", "mode": "filtered", "query": "1500以内的跑鞋排除便宜货", "slots": {"category": "跑鞋", "priceMin": 900, "budget": 1500}, "relevant": [2, 3, 5], "note": "下界过滤：900~1500 区间（899 的 1/10 被下界排除）"}
+{"id":"R21","mode":"semantic","query":"碳板跑鞋","slots":null,"relevant":[3,9],"note":"卖点明写碳板"}
+{"id":"R22","mode":"semantic","query":"大体重跑者穿的鞋","slots":null,"relevant":[4],"note":"描述明写大体重"}
+{"id":"R23","mode":"semantic","query":"通勤和跑步都能穿的鞋","slots":null,"relevant":[5],"note":"卖点：通勤跑步两相宜"}
+{"id":"R24","mode":"semantic","query":"清仓便宜的耐克跑鞋","slots":null,"relevant":[6],"note":"清仓价格实惠+Nike"}
+{"id":"R25","mode":"semantic","query":"钛金属的手表","slots":null,"relevant":[13],"note":"material=titanium"}
+{"id":"R26","mode":"semantic","query":"不用换电池的表","slots":null,"relevant":[13],"note":"光动能描述"}
+{"id":"R27","mode":"semantic","query":"80小时动力储存的手表","slots":null,"relevant":[14],"note":"80小时储"}
+{"id":"R28","mode":"semantic","query":"潜水表","slots":null,"relevant":[18],"note":"潜水规格"}
+{"id":"R29","mode":"semantic","query":"双时区手表","slots":null,"relevant":[20],"note":"GMT"}
+{"id":"R30","mode":"semantic","query":"蓝牙连手机的电子表","slots":null,"relevant":[16],"note":"蓝牙校时电子表"}
+{"id":"R31","mode":"semantic","query":"戴头上的降噪耳机","slots":null,"relevant":[21,23],"note":"over-ear+降噪"}
+{"id":"R32","mode":"semantic","query":"苹果手机配的耳机","slots":null,"relevant":[22],"note":"iOS生态"}
+{"id":"R33","mode":"semantic","query":"戴着舒服不夹头的耳机","slots":null,"relevant":[23],"note":"佩戴舒适"}
+{"id":"R34","mode":"semantic","query":"音质发烧友耳机","slots":null,"relevant":[24],"note":"HiFi音质"}
+{"id":"R35","mode":"semantic","query":"哑光质感的口红","slots":null,"relevant":[26,28,29,30],"note":"finish=matte（干扰：satin 27 排除）"}
+{"id":"R36","mode":"semantic","query":"适合干皮妹子的口红","slots":null,"relevant":[28],"note":"skin_type=normal 最接近，弱相关标注"}
+{"id":"R37","mode":"semantic","query":"情人节送女友的礼物色号","slots":null,"relevant":[27,30],"note":"正红/番茄红礼物场景"}
+{"id":"R38","mode":"semantic","query":"适合上班涂的温柔颜色口红","slots":null,"relevant":[26,28],"note":"豆沙/奶茶温柔色"}
+{"id":"R39","mode":"semantic","query":"夜跑反光安全的鞋","slots":null,"relevant":[7],"note":"粉色显眼/女款轻量；弱标注"}
+{"id":"R40","mode":"semantic","query":"扁平足支撑系跑鞋","slots":null,"relevant":[4],"note":"4D稳定系统"}
+{"id":"R41","mode":"semantic","query":"带音量控制的头戴耳机","slots":null,"relevant":[],"note":"属性未标注，预期空/弱召回——负例"}
+{"id":"R42","mode":"semantic","query":"礼盒装的口红套装","slots":null,"relevant":[],"note":"库内无套装——负例"}
+{"id":"R43","mode":"semantic","query":"入门蓝牙耳机两百多的","slots":null,"relevant":[25],"note":"299元入门蓝牙"}
+{"id":"R44","mode":"semantic","query":"男士商务正装表","slots":null,"relevant":[14,19],"note":"瑞表正装/商务通勤"}
+{"id":"R45","mode":"semantic","query":"抓地力强的户外跑鞋","slots":null,"relevant":[8],"note":"Vibram抓地"}

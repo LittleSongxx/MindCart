@@ -67,12 +67,18 @@ public class ShoppingQaService {
      * 其余类型为确定性组装，一次性回调全文。完成后落库并返回 QA 实体。
      */
     public ShoppingQa ask(ShoppingQaRequest request, java.util.function.Consumer<String> deltaSink) {
+        // 身份以网关注入的当前用户为准（SSE 异步路径由控制器在请求线程内先行捕获覆盖），
+        // 请求体/query 里的 userId 一律不信任
+        Integer currentUserId = com.smartore.common.context.UserContext.getUserIdOrNull();
+        if (currentUserId != null) {
+            request.setUserId(currentUserId);
+        }
         validate(request);
         // 多轮会话归属与轮次（ADR-009：最近 3 轮进上下文，字符预算截断）
         attachConversation(request);
         String now = DateUtil.now();
         ShoppingQa qa = new ShoppingQa();
-        qa.setQaNo("QA" + DateUtil.format(DateUtil.date(), "yyyyMMddHHmmssSSS"));
+        qa.setQaNo(com.smartore.common.util.BizNoGenerator.next("QA"));
         qa.setUserId(request.getUserId());
         qa.setConversationId(request.getConversationId());
         qa.setRoundNo(request.getRoundNo());
@@ -107,34 +113,58 @@ public class ShoppingQaService {
         return qa;
     }
 
+    /** 删除问答：本人或管理员（历史问答可能含个人偏好等隐私文本） */
     public void deleteById(Integer id) {
+        requireOwnedOrAdmin(id);
         shoppingQaMapper.deleteById(id);
     }
 
     public void deleteBatch(List<Integer> ids) {
         for (Integer id : ids) {
-            shoppingQaMapper.deleteById(id);
+            deleteById(id);
+        }
+    }
+
+    private void requireOwnedOrAdmin(Integer id) {
+        if (com.smartore.common.context.UserContext.isAdmin()) {
+            return;
+        }
+        ShoppingQa qa = shoppingQaMapper.selectById(id);
+        if (qa == null || !qa.getUserId().equals(com.smartore.common.context.UserContext.requireUserId())) {
+            throw new CustomException(ResultCodeEnum.FORBIDDEN);
         }
     }
 
     public List<ShoppingQa> selectAll(ShoppingQa shoppingQa) {
+        visibleCondition(shoppingQa);
         List<ShoppingQa> list = shoppingQaMapper.selectAll(shoppingQa);
         nameFillService.fillUserNames(list, ShoppingQa::getUserId, ShoppingQa::setUserName);
         return list;
     }
 
     public PageInfo<ShoppingQa> selectPage(ShoppingQa shoppingQa, Integer pageNum, Integer pageSize) {
+        visibleCondition(shoppingQa);
         PageHelper.startPage(pageNum, pageSize);
         List<ShoppingQa> list = shoppingQaMapper.selectAll(shoppingQa);
         nameFillService.fillUserNames(list, ShoppingQa::getUserId, ShoppingQa::setUserName);
         return PageInfo.of(list);
     }
 
-    /** 会话归属：无 conversationId 则建新会话（标题=首问截断）；roundNo 单调递增 */
+    /** 普通用户只能查自己的问答记录 */
+    private void visibleCondition(ShoppingQa shoppingQa) {
+        if (!com.smartore.common.context.UserContext.isAdmin()) {
+            shoppingQa.setUserId(com.smartore.common.context.UserContext.requireUserId());
+        }
+    }
+
+    /** 会话归属：他人的 conversationId 一律拒绝（防跨用户会话劫持/历史注入）；无则新建，roundNo 单调递增 */
     private void attachConversation(ShoppingQaRequest request) {
         if (request.getConversationId() != null) {
             com.smartore.ai.entity.QaConversation existing = qaConversationMapper.selectById(request.getConversationId());
             if (existing != null) {
+                if (!request.getUserId().equals(existing.getUserId())) {
+                    throw new CustomException(ResultCodeEnum.FORBIDDEN, "会话不存在");
+                }
                 request.setRoundNo(nextRoundNo(existing.getId()));
                 return;
             }
@@ -153,7 +183,8 @@ public class ShoppingQaService {
         return shoppingQaMapperDirect.selectAll(condition).size() + 1;
     }
 
-    /** 最近 3 轮问答进上下文（每轮答案截 300 字符，总预算 1200 字符——超出部分丢弃最旧轮） */
+    /** 最近 3 轮问答进上下文（每轮答案截 300 字符，总预算 1200 字符——超出部分丢弃最旧轮）。
+     *  mapper 按 id desc 返回（最新在前），从头部取即为最近 3 轮。 */
     private String buildHistoryContext(Integer conversationId) {
         if (conversationId == null) {
             return "";
@@ -166,7 +197,7 @@ public class ShoppingQaService {
         }
         StringBuilder builder = new StringBuilder("历史问答（供参考，不含当前问题）：\n");
         int budget = 1200;
-        for (int i = history.size() - 1, taken = 0; i >= 0 && taken < 3; i--, taken++) {
+        for (int i = 0, taken = 0; i < history.size() && taken < 3; i++, taken++) {
             com.smartore.ai.entity.ShoppingQa round = history.get(i);
             String piece = "问：" + cn.hutool.core.util.StrUtil.maxLength(cn.hutool.core.util.StrUtil.nullToEmpty(round.getQuestionText()), 100)
                     + "\n答：" + cn.hutool.core.util.StrUtil.maxLength(cn.hutool.core.util.StrUtil.nullToEmpty(round.getAnswerText()), 300) + "\n";
@@ -298,6 +329,12 @@ public class ShoppingQaService {
         toolRequest.setOrderId(request.getOrderId());
         toolRequest.setOrderNo(request.getOrderNo());
         BusinessToolResult order = businessToolService.queryOrderStatus(toolRequest);
+        // 订单问答只允许查自己的订单（收货人/电话/地址属 PII，防 IDOR）
+        if (!com.smartore.common.context.UserContext.isAdmin()
+                && order.getUserId() != null
+                && !order.getUserId().equals(request.getUserId())) {
+            throw new CustomException(ResultCodeEnum.FORBIDDEN, "只能查询自己的订单");
+        }
 
         qa.setOrderId(order.getOrderId());
         qa.setOrderNo(order.getOrderNo());

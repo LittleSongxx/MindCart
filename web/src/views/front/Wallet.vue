@@ -55,7 +55,7 @@
       </el-form>
       <template #footer>
         <el-button @click="data.rechargeVisible = false">取消</el-button>
-        <el-button type="primary" @click="recharge">确认充值</el-button>
+        <el-button type="primary" :loading="data.rechargeSubmitting" @click="recharge">确认充值</el-button>
       </template>
     </el-dialog>
   </div>
@@ -121,9 +121,10 @@ const loadRecords = () => {
 
 const openRecharge = () => {
   data.form = {
-    userId: data.user.id,
     amount: 100,
-    remark: '用户钱包充值'
+    remark: '用户钱包充值',
+    // 充值幂等键：双击/超时重试同一键，后端只入账一次
+    requestId: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
   }
   data.rechargeVisible = true
 }
@@ -133,6 +134,10 @@ const recharge = () => {
     ElMessage.warning('请输入正确的充值金额')
     return
   }
+  if (data.rechargeSubmitting) {
+    return
+  }
+  data.rechargeSubmitting = true
   request.post('/wallet/recharge', data.form).then(res => {
     if (res.code === '200') {
       data.user = { ...data.user, ...res.data, token: data.user.token }
@@ -143,6 +148,8 @@ const recharge = () => {
     } else {
       ElMessage.error(res.msg)
     }
+  }).finally(() => {
+    data.rechargeSubmitting = false
   })
 }
 

@@ -23,6 +23,9 @@ import java.util.List;
 @Service
 public class WalletRecordService {
 
+    /** 演示环境无支付网关回调，充值是模拟入账：设单笔上限防"自我铸币"无限放大 */
+    private static final BigDecimal MAX_RECHARGE = new BigDecimal("10000");
+
     @Resource
     private UserMapper userMapper;
     @Resource
@@ -34,9 +37,20 @@ public class WalletRecordService {
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
         }
-        User user = userMapper.selectById(userId);
+        if (request.getAmount().compareTo(MAX_RECHARGE) > 0) {
+            throw new CustomException(ResultCodeEnum.PARAM_ERROR, "单笔充值上限 " + MAX_RECHARGE.toPlainString() + " 元");
+        }
+        // 行锁串行化同用户的并发充值：balance_after 在锁内基于最新余额计算，流水链严格连续
+        User user = userMapper.selectByIdForUpdate(userId);
         if (ObjectUtil.isNull(user)) {
             throw new CustomException(ResultCodeEnum.USER_NOT_EXIST_ERROR);
+        }
+        String businessNo = cn.hutool.core.util.StrUtil.isBlank(request.getRequestId())
+                ? BizNoGenerator.next("RC")
+                : "RC:" + request.getRequestId();
+        // 幂等：同一 requestId 双击/重试只入账一次，重复请求直接返回当前余额
+        if (walletRecordMapper.selectByBizNoAndType(businessNo, "RECHARGE") != null) {
+            return sanitize(userMapper.selectById(userId));
         }
         userMapper.increaseBalance(userId, request.getAmount());
 
@@ -44,17 +58,22 @@ public class WalletRecordService {
         record.setUserId(userId);
         record.setType("RECHARGE");
         record.setAmount(request.getAmount());
-        record.setBalanceAfter(userMapper.selectById(userId).getBalance());
-        record.setBusinessNo(BizNoGenerator.next("RC"));
+        record.setBalanceAfter(user.getBalance().add(request.getAmount()));
+        record.setBusinessNo(businessNo);
         record.setRemark(ObjectUtil.isEmpty(request.getRemark()) ? "用户钱包充值" : request.getRemark());
         record.setCreateTime(cn.hutool.core.date.DateUtil.now());
         walletRecordMapper.insert(record);
-        User updated = userMapper.selectById(userId);
-        updated.setPassword(null);
-        return updated;
+        return sanitize(userMapper.selectById(userId));
     }
 
     public List<WalletRecord> selectOwnRecords() {
         return walletRecordMapper.selectByUserId(UserContext.requireUserId());
+    }
+
+    private User sanitize(User user) {
+        if (user != null) {
+            user.setPassword(null);
+        }
+        return user;
     }
 }

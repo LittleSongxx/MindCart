@@ -7,6 +7,8 @@ public class WalletRechargeRequest {
     private Integer userId;
     private BigDecimal amount;
     private String remark;
+    /** 客户端生成的充值幂等键（UUID）：双击/重试同一键只入账一次；空则退化为随机单号 */
+    private String requestId;
 
     public Integer getUserId() {
         return userId;
@@ -30,5 +32,13 @@ public class WalletRechargeRequest {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 }

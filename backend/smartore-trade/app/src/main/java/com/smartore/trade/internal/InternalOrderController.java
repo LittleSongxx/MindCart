@@ -68,6 +68,29 @@ public class InternalOrderController {
                 .toList());
     }
 
+    /**
+     * 最近已购商品 ID（去重、新单在前）：供 smartore-voice 的历史订单画像回流
+     * （voice 的动态画像此前只从语音会话里学，看不到真实购买）。只读，不暴露金额明细。
+     */
+    @GetMapping("/recent-product-ids/{userId}")
+    public Result<List<Integer>> recentProductIds(@PathVariable Integer userId,
+                                                  @RequestParam(defaultValue = "5") Integer limit) {
+        ShopOrder condition = new ShopOrder();
+        condition.setUserId(userId);
+        List<Integer> ids = new java.util.ArrayList<>();
+        shopOrderMapper.selectAll(condition).stream()
+                .filter(o -> List.of("PAID", "SHIPPED", "COMPLETED").contains(o.getStatus()))
+                .limit(Math.max(1, limit))
+                .forEach(o -> {
+                    for (ShopOrderItem item : shopOrderItemMapper.selectByOrderId(o.getId())) {
+                        if (item.getProductId() != null && !ids.contains(item.getProductId())) {
+                            ids.add(item.getProductId());
+                        }
+                    }
+                });
+        return Result.success(ids);
+    }
+
     @GetMapping("/owns-product")
     public Result<Boolean> ownsProduct(@RequestParam Integer userId, @RequestParam Integer productId) {
         ShopOrder condition = new ShopOrder();
@@ -77,6 +100,24 @@ public class InternalOrderController {
                 .anyMatch(o -> shopOrderItemMapper.selectByOrderId(o.getId()).stream()
                         .anyMatch(item -> productId.equals(item.getProductId())));
         return Result.success(owned);
+    }
+
+    /**
+     * 评价资格校验（精确版）：订单行属于该用户、订单已完成、且行内确实是指定商品。
+     * 相比 owns-product 收紧了"订单行归属"——防止拿别人的 orderItemId 冒名/占位评价。
+     */
+    @GetMapping("/owns-order-item")
+    public Result<Boolean> ownsOrderItem(@RequestParam Integer userId,
+                                         @RequestParam Integer orderItemId,
+                                         @RequestParam Integer productId) {
+        ShopOrderItem item = shopOrderItemMapper.selectById(orderItemId);
+        if (item == null || !productId.equals(item.getProductId())) {
+            return Result.success(false);
+        }
+        ShopOrder order = shopOrderMapper.selectById(item.getOrderId());
+        return Result.success(order != null
+                && userId.equals(order.getUserId())
+                && "COMPLETED".equals(order.getStatus()));
     }
 
     @GetMapping("/stats-all")

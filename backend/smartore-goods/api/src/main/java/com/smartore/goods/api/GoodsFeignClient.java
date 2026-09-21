@@ -65,4 +65,12 @@ public interface GoodsFeignClient {
     /** 商品已审核通过的评价 */
     @GetMapping("/internal/review/by-product/{productId}")
     Result<List<ProductReviewVO>> approvedReviews(@PathVariable("productId") Integer productId);
+
+    /**
+     * 分页列出在售商品（含类目/品牌名称），供 smartore-voice 全量同步目录+向量。
+     * 只读；消费方翻页直到返回空页为止。
+     */
+    @GetMapping("/internal/product/listOnSale")
+    Result<List<ProductSyncVO>> listOnSale(@RequestParam(value = "page", defaultValue = "1") Integer page,
+                                           @RequestParam(value = "size", defaultValue = "100") Integer size);
 }

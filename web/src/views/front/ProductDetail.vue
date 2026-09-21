@@ -51,6 +51,10 @@
             <el-input-number v-model="data.quantity" :min="1" :max="Math.max(data.product.stockQuantity || 1, 1)" />
             <el-button plain @click="addFavorite">收藏</el-button>
             <el-button type="primary" :disabled="!data.product.stockQuantity" @click="addCart">加入购物车</el-button>
+            <!-- 语音入口：带着当前商品进语音导购，服务端按 PRODUCT_PAGE + productId 归因 -->
+            <el-button plain type="success" @click="goVoiceGuide">
+              <el-icon style="margin-right: 4px"><Microphone /></el-icon>语音问这款
+            </el-button>
           </div>
         </div>
       </section>
@@ -164,10 +168,11 @@
 </template>
 
 <script setup>
-import { computed, reactive } from "vue";
+import { computed, onUnmounted, reactive } from "vue";
 import { useRoute } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { Microphone } from "@element-plus/icons-vue";
 import router from "@/router/index.js";
 
 const route = useRoute()
@@ -316,6 +321,17 @@ const addCart = () => {
   })
 }
 
+// 商详页语音入口：PRODUCT_PAGE 渠道 + productId 归因，未登录先拦去登录页
+const goVoiceGuide = () => {
+  if (!checkLogin()) {
+    return
+  }
+  router.push({
+    path: '/front/guide',
+    query: { mode: 'voice', channel: 'PRODUCT_PAGE', productId: String(data.product.id) }
+  })
+}
+
 // AI 问答：走 RAG 链路，后端先向量检索商品知识切片，再让大模型依据切片作答
 const askQuestion = () => {
   if (!checkLogin()) {
@@ -328,33 +344,49 @@ const askQuestion = () => {
   data.qaLoading = true
   data.qaStreaming = ''
   // SSE 流式：delta 渐进渲染，complete 携带完整 QA（含 conversationId，供多轮延续）
+  // userId 不再上送：后端以网关注入的当前用户为准
   const params = new URLSearchParams({
-    userId: String(data.user.id),
     questionType: 'PRODUCT',
     questionText: data.qaQuestion,
     productId: String(data.product.id),
     productName: data.product.name
   })
   if (data.qaConversationId) params.set('conversationId', String(data.qaConversationId))
-  // EventSource 无法携带自定义请求头（SSE 认证的经典问题），token 走 query 参数兜底（网关已支持）
+  // EventSource 无法携带自定义请求头（SSE 认证的经典问题），
+  // token 走 query 参数仅对该端点开放（网关 QUERY_TOKEN_PATHS 白名单）
   params.set('token', JSON.parse(localStorage.getItem('sys-user') || '{}').token || '')
-  const source = new EventSource('/api/shoppingQa/askStream?' + params.toString())
-  source.addEventListener('delta', e => { data.qaStreaming += e.data })
-  source.addEventListener('complete', e => {
-    data.qaResult = JSON.parse(e.data)
-    data.qaConversationId = data.qaResult.conversationId || data.qaConversationId
+  closeQaStream()
+  qaSource = new EventSource('/api/shoppingQa/askStream?' + params.toString())
+  qaSource.addEventListener('delta', e => { data.qaStreaming += e.data })
+  qaSource.addEventListener('complete', e => {
+    try {
+      data.qaResult = JSON.parse(e.data)
+      data.qaConversationId = data.qaResult.conversationId || data.qaConversationId
+    } catch (parseError) {
+      // 脏 complete 载荷不致命：保留已流式渲染的文本，不让 loading 卡死
+      ElMessage.warning('回答已完成，但结果解析失败')
+    }
     data.qaStreaming = ''
-    source.close()
+    closeQaStream()
     data.qaLoading = false
   })
-  source.addEventListener('error', e => {
+  qaSource.addEventListener('error', e => {
     if (e.data) ElMessage.error(String(e.data).slice(0, 120))
-    else if (source.readyState === EventSource.CLOSED) { /* complete 后正常关闭 */ }
     data.qaStreaming = ''
-    source.close()
+    closeQaStream()
     data.qaLoading = false
   })
 }
+
+// SSE 连接句柄：组件卸载时必须关闭，否则流式中路由离开会白占连接到 120s 超时
+let qaSource = null
+const closeQaStream = () => {
+  if (qaSource) {
+    qaSource.close()
+    qaSource = null
+  }
+}
+onUnmounted(closeQaStream)
 
 // 商品 id 从路由参数拿：/front/product/12
 const productId = route.params.id

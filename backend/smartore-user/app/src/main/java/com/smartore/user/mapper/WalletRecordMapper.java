@@ -1,6 +1,7 @@
 package com.smartore.user.mapper;
 
 import com.smartore.user.entity.WalletRecord;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -28,4 +29,7 @@ public interface WalletRecordMapper {
 
     @Update("update wallet_record set balance_after = #{balanceAfter} where id = #{id}")
     int updateBalanceAfter(@Param("id") Integer id, @Param("balanceAfter") java.math.BigDecimal balanceAfter);
+
+    @Delete("delete from wallet_record where user_id = #{userId}")
+    int deleteByUserId(Integer userId);
 }

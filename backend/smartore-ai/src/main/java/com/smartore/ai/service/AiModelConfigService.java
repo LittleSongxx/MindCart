@@ -35,6 +35,8 @@ public class AiModelConfigService {
     @Value("${smartore.model.crypto-key:}")
     private String cryptoKey;
 
+    /** 插入/更新 + 互斥禁用必须原子，否则并发可留下两条 enabled */
+    @org.springframework.transaction.annotation.Transactional
     public void add(AiModelConfig config) {
         validate(config);
         if (config.getTemperature() == null) {
@@ -53,6 +55,7 @@ public class AiModelConfigService {
         aiModelConfigMapper.insert(config);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void updateById(AiModelConfig config) {
         if (ObjectUtil.isEmpty(config.getId())) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
@@ -104,19 +107,10 @@ public class AiModelConfigService {
         return config;
     }
 
+    /** 同类型互斥启用：单条条件 UPDATE（原子），替代"读-改-写"循环——
+     *  循环版本并发启用可留下两条 enabled，模型选择（findEnabledConfig 取 id desc）变得不确定 */
     private void disableOthers(AiModelConfig config) {
-        AiModelConfig condition = new AiModelConfig();
-        condition.setModelType(config.getModelType());
-        for (AiModelConfig other : aiModelConfigMapper.selectAll(condition)) {
-            if (other.getIsEnabled() != null && other.getIsEnabled() == 1
-                    && !other.getId().equals(config.getId())) {
-                AiModelConfig update = new AiModelConfig();
-                update.setId(other.getId());
-                update.setIsEnabled(0);
-                update.setUpdateTime(DateUtil.now());
-                aiModelConfigMapper.updateById(update);
-            }
-        }
+        aiModelConfigMapper.disableOthersOfModelType(config.getModelType(), config.getId());
     }
 
     private String encrypt(String plainKey) {
@@ -131,6 +125,8 @@ public class AiModelConfigService {
         return apiKey != null && apiKey.startsWith("sk-****");
     }
 
+    /** 掩码作用在库内值（enc: 密文）上——展示的是密文尾 4 位，真实 Key 尾 4 位不可逆。
+     *  管理界面据此区分"已配置/未配置"，不能用于比对 Key 内容。 */
     private AiModelConfig mask(AiModelConfig config) {
         String key = config.getApiKey();
         if (StrUtil.isNotBlank(key)) {

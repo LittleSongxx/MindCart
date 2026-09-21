@@ -31,10 +31,16 @@ public class ShoppingCartService {
     @Resource
     private GoodsFeignClient goodsClient;
 
+    /** 单行数量上限：防恶意超大数量行撑爆下单校验/库存流水 */
+    private static final int MAX_QUANTITY_PER_LINE = 99;
+
     public void add(ShoppingCart cart) {
         Integer userId = UserContext.requireUserId();
         if (cart.getProductId() == null || cart.getQuantity() == null || cart.getQuantity() <= 0) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
+        }
+        if (cart.getQuantity() > MAX_QUANTITY_PER_LINE) {
+            throw new CustomException(ResultCodeEnum.PARAM_ERROR, "单个商品最多加购 " + MAX_QUANTITY_PER_LINE + " 件");
         }
         ProductVO product = unwrap(goodsClient.getProduct(cart.getProductId()));
         if (product == null || !"ON_SALE".equals(product.getStatus())) {

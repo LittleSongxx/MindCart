@@ -27,6 +27,10 @@ public interface TradeEventLedgerMapper {
     @Update("update trade_event_ledger set publish_attempts = publish_attempts + 1 where id = #{id}")
     int increaseAttempts(@Param("id") Integer id);
 
+    /** 重试耗尽：PENDING→FAILED（返回条数供告警日志）；人工处置后可复位重投 */
+    @Update("update trade_event_ledger set publish_status = 'FAILED' where publish_status = 'PENDING' and publish_attempts >= 10")
+    int markFailedExhausted();
+
     @Select("select * from trade_event_ledger where order_no = #{orderNo} and publish_status = 'PUBLISHED'")
     List<TradeEventLedger> selectPublishedByOrderNo(@Param("orderNo") String orderNo);
 }

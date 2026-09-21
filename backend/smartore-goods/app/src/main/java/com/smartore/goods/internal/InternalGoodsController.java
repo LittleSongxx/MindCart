@@ -3,6 +3,7 @@ package com.smartore.goods.internal;
 import com.github.pagehelper.PageHelper;
 import com.smartore.common.result.Result;
 import com.smartore.goods.api.ProductVO;
+import com.smartore.goods.api.ProductSyncVO;
 import com.smartore.goods.api.StockOpRequest;
 import com.smartore.goods.entity.Product;
 import com.smartore.goods.mapper.ProductMapper;
@@ -11,7 +12,9 @@ import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 集群内内部接口：商品快照、候选检索、批量现价、库存 Saga。网关不路由 /internal/**。
@@ -32,6 +35,10 @@ public class InternalGoodsController {
     private com.smartore.goods.mapper.ProductDetailMapper productDetailMapper;
     @Resource
     private com.smartore.goods.mapper.ProductParamMapper productParamMapper;
+    @Resource
+    private com.smartore.goods.mapper.ProductCategoryMapper productCategoryMapper;
+    @Resource
+    private com.smartore.goods.mapper.ProductBrandMapper productBrandMapper;
 
     private com.smartore.goods.api.ProductReviewVO toReviewVO(com.smartore.goods.entity.ProductReview r) {
         com.smartore.goods.api.ProductReviewVO vo = new com.smartore.goods.api.ProductReviewVO();
@@ -165,6 +172,51 @@ public class InternalGoodsController {
             }
         }
         return Result.success(result);
+    }
+
+    /**
+     * 分页列出在售商品（含类目/品牌名称），供 smartore-voice 全量同步目录+向量。
+     * 只读；名称映射两表各查一次组装成 map，避免 N+1。
+     */
+    @GetMapping("/product/listOnSale")
+    public Result<List<com.smartore.goods.api.ProductSyncVO>> listOnSale(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "100") Integer size) {
+        Map<Integer, String> categoryNames = new HashMap<>();
+        for (com.smartore.goods.entity.ProductCategory c : productCategoryMapper.selectAll(null)) {
+            categoryNames.put(c.getId(), c.getName());
+        }
+        Map<Integer, String> brandNames = new HashMap<>();
+        for (com.smartore.goods.entity.ProductBrand b : productBrandMapper.selectAll(null)) {
+            brandNames.put(b.getId(), b.getName());
+        }
+        Product condition = new Product();
+        condition.setStatus("ON_SALE");
+        PageHelper.startPage(Math.max(1, page), Math.max(1, Math.min(size, 500)));
+        List<ProductSyncVO> out = productMapper.selectAll(condition).stream()
+                .map(p -> toSyncVO(p, categoryNames, brandNames))
+                .toList();
+        return Result.success(out);
+    }
+
+    private com.smartore.goods.api.ProductSyncVO toSyncVO(Product product,
+                                                          Map<Integer, String> categoryNames,
+                                                          Map<Integer, String> brandNames) {
+        com.smartore.goods.api.ProductSyncVO vo = new com.smartore.goods.api.ProductSyncVO();
+        vo.setId(product.getId());
+        vo.setName(product.getName());
+        vo.setCoverImage(product.getCoverImage());
+        vo.setPrice(product.getPrice());
+        vo.setOriginalPrice(product.getOriginalPrice());
+        vo.setTags(product.getTags());
+        vo.setSellingPoint(product.getSellingPoint());
+        vo.setStatus(product.getStatus());
+        vo.setStockQuantity(product.getStockQuantity());
+        vo.setCategoryId(product.getCategoryId());
+        vo.setCategoryName(categoryNames.get(product.getCategoryId()));
+        vo.setBrandId(product.getBrandId());
+        vo.setBrandName(brandNames.get(product.getBrandId()));
+        return vo;
     }
 
     /** 启用中的售后规则（AI 售后问答证据源） */

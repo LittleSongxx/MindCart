@@ -17,6 +17,26 @@
       </div>
     </section>
 
+    <!-- 通道切换：同一个 AI 智能导购页里选文本或语音（紧凑分段控件，避免与内容区抢视觉重心） -->
+    <div class="mode-bar">
+      <div class="mode-seg" role="tablist">
+        <button type="button" role="tab" :class="{ active: mode === 'text' }" @click="switchMode('text')">
+          <el-icon><ChatLineSquare /></el-icon><span>文本导购</span>
+        </button>
+        <button type="button" role="tab" :class="{ active: mode === 'voice' }" @click="switchMode('voice')">
+          <el-icon><Microphone /></el-icon><span>语音导购</span>
+        </button>
+      </div>
+      <p class="mode-hint">
+        {{ mode === 'voice'
+          ? '开口说需求，AI 边聊边推荐，可直接语音下单'
+          : '填写需求与预算，AI 结合库存与优惠生成推荐清单' }}
+      </p>
+    </div>
+
+    <VoiceGuidePanel v-if="mode === 'voice'" :channel="voiceChannel" :product-id="voiceProductId" />
+
+    <template v-else>
     <section class="guide-workspace">
       <div class="demand-card">
         <div class="section-heading">
@@ -157,15 +177,32 @@
       </div>
       <el-empty v-else :image-size="70" description="还没有导购记录，提交一次需求试试吧" />
     </section>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { nextTick, reactive, ref } from 'vue'
+import { nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { ChatLineSquare, Delete, Microphone } from '@element-plus/icons-vue'
 import request from '@/utils/request.js'
 import router from '@/router/index.js'
+import VoiceGuidePanel from '@/components/guide/VoiceGuidePanel.vue'
+
+// 通道模式：文本 / 语音（同一个 AI 智能导购页内切换；?mode=voice 可深链直达）
+// channel/productId 是语音会话的归因参数（商详页 / 搜索兜底入口带进来），切通道时不能丢
+const route = router.currentRoute.value
+const mode = ref(route.query.mode === 'voice' ? 'voice' : 'text')
+const voiceChannel = ref(typeof route.query.channel === 'string' ? route.query.channel : 'HOME_ENTRY')
+const voiceProductId = ref(route.query.productId != null ? String(route.query.productId) : null)
+const switchMode = (next) => {
+  mode.value = next
+  // 同步到 query：刷新/分享后仍停留在所选通道（用 replace 避免把切换写进历史栈）
+  const query = next === 'voice' ? { mode: 'voice' } : {}
+  if (next === 'voice' && voiceChannel.value !== 'HOME_ENTRY') query.channel = voiceChannel.value
+  if (next === 'voice' && voiceProductId.value != null) query.productId = voiceProductId.value
+  router.replace({ path: '/front/guide', query })
+}
 
 const suggestions = [
   '5000 元左右的轻薄办公本',
@@ -276,7 +313,9 @@ const selectTask = task => {
   })
 }
 
-// 轮询导购任务状态：RUNNING/WAITING 继续，DONE/FAILED/PAY 停止；上限 5 分钟
+// 轮询导购任务状态：RUNNING/WAITING 继续，DONE/FAILED/PAY 停止；上限 5 分钟。
+// 句柄挂在模块级注册表：组件卸载时统一清理，否则离开页面后轮询仍持续 5 分钟
+const pollTimers = new Set()
 const pollTask = (taskId, intervalMs = 2000, maxAttempts = 150) => {
   return new Promise((resolve, reject) => {
     let attempts = 0
@@ -286,18 +325,29 @@ const pollTask = (taskId, intervalMs = 2000, maxAttempts = 150) => {
         const res = await request.get('/shoppingGuideTask/selectAll?id=' + taskId)
         const task = res.data?.find(t => t.id === taskId) || null
         if (task && ['DONE', 'FAILED'].includes(task.status)) {
-          clearInterval(timer)
+          stopPoll(timer)
           resolve(task)
         } else if (attempts >= maxAttempts) {
-          clearInterval(timer)
+          stopPoll(timer)
           resolve(task || { status: 'WAITING', executeMessage: '执行超时，请稍后在历史记录中查看' })
         }
       } catch (e) {
-        clearInterval(timer)
+        stopPoll(timer)
         reject(e)
       }
     }, intervalMs)
+    pollTimers.add(timer)
   })
+const stopPoll = (timer) => {
+  clearInterval(timer)
+  pollTimers.delete(timer)
+}
+onBeforeUnmount(() => {
+  for (const timer of pollTimers) {
+    clearInterval(timer)
+  }
+  pollTimers.clear()
+})
 }
 
 const generate = async () => {
@@ -362,15 +412,15 @@ loadHistory()
 
 <style scoped>
 .guide-page { max-width: 1180px; margin: 0 auto; padding: 24px 0 36px; color: #172033; }
-.guide-hero { min-height: 210px; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 34px 40px; overflow: hidden; border-radius: 16px; color: #fff; background: radial-gradient(circle at 82% 0, rgba(84, 214, 228, .28), transparent 35%), linear-gradient(135deg, #081722, #103745); }
+.guide-hero { min-height: 176px; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 26px 36px; overflow: hidden; border-radius: 16px; color: #fff; background: radial-gradient(circle at 82% 0, rgba(84, 214, 228, .28), transparent 35%), linear-gradient(135deg, #081722, #103745); }
 .assistant-mark { display: flex; align-items: center; gap: 10px; color: #72e2ed; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
 .assistant-mark img { width: 38px; height: 38px; object-fit: cover; border: 2px solid rgba(255,255,255,.8); border-radius: 11px; }
-.hero-copy h1 { margin: 15px 0 0; font-size: 31px; letter-spacing: -.03em; }
-.hero-copy p { max-width: 620px; margin: 11px 0 0; color: #a7bec8; font-size: 13px; line-height: 1.8; }
+.hero-copy h1 { margin: 12px 0 0; font-size: 27px; letter-spacing: -.03em; }
+.hero-copy p { max-width: 620px; margin: 9px 0 0; color: #a7bec8; font-size: 13px; line-height: 1.7; }
 .hero-capabilities { width: 210px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex-shrink: 0; }
-.hero-capabilities span { padding: 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: #c3d4dc; background: rgba(255,255,255,.06); font-size: 11px; }
+.hero-capabilities span { padding: 9px 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: #c3d4dc; background: rgba(255,255,255,.06); font-size: 11px; }
 .hero-capabilities i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #56d8e5; }
-.guide-workspace { display: grid; grid-template-columns: 390px 1fr; gap: 16px; margin-top: 16px; }
+.guide-workspace { display: grid; grid-template-columns: 390px 1fr; gap: 16px; margin-top: 14px; }
 .demand-card, .result-card, .history-card { border: 1px solid #e3e9ef; border-radius: 14px; background: #fff; box-shadow: 0 8px 25px rgba(29, 50, 75, .045); }
 .demand-card, .result-card { min-height: 520px; padding: 22px; }
 .section-heading, .history-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
@@ -422,4 +472,21 @@ loadHistory()
 .history-text { min-width: 0; }.history-text strong { display: block; overflow: hidden; color: #354252; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.history-text small { display: block; margin-top: 4px; color: #9ba4af; font-size: 8px; }.history-main b { color: #168f9f; font-size: 9px; white-space: nowrap; }
 @media (max-width: 900px) { .guide-workspace { grid-template-columns: 1fr; }.demand-card, .result-card { min-height: auto; }.hero-capabilities { display: none; }.history-list { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .guide-page { padding: 12px; }.guide-hero { padding: 25px 22px; }.hero-copy h1 { font-size: 24px; }.condition-grid { grid-template-columns: 1fr; }.recommendation-item { grid-template-columns: 70px 1fr; }.product-image { width: 70px; height: 70px; }.recommend-meta { flex-wrap: wrap; }.history-card { padding: 17px; } }
+
+/* 通道切换：紧凑分段控件（文本 / 语音）+ 一行模式说明 */
+.mode-bar { display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  margin: 12px 0 0; padding: 6px 8px 6px 6px; border: 1px solid #e3e9ef; border-radius: 999px;
+  background: #fff; box-shadow: 0 6px 18px rgba(29, 50, 75, .04); }
+.mode-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: #eef3f5; flex-shrink: 0; }
+.mode-seg button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 20px; border: 0;
+  border-radius: 999px; background: transparent; color: #5b6b7a; font-size: 14px; cursor: pointer;
+  transition: color .18s, background .18s, box-shadow .18s; }
+.mode-seg button .el-icon { font-size: 16px; }
+.mode-seg button:hover { color: #168f9f; }
+.mode-seg button.active { color: #0f7c8a; background: #fff; font-weight: 600;
+  box-shadow: 0 1px 6px rgba(22, 143, 159, .2); }
+.mode-hint { min-width: 0; margin: 0; padding-right: 10px; overflow: hidden; color: #9ba4af;
+  font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .mode-hint { display: none; } .mode-bar { justify-content: center; } }
+@media (max-width: 620px) { .mode-seg button { padding: 8px 14px; font-size: 13px; } }
 </style>

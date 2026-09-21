@@ -12,6 +12,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -89,6 +90,8 @@ public class ProductKnowledgeService {
      * 商品详情和规格参数本来只在前台展示，不进知识库就无法被向量检索到，
      * 导入后它们和人工维护的资料一样参与切片、向量化和相似度检索。
      */
+    /** 覆盖式导入：清旧（向量/切片/知识）+ 插新必须原子，失败回滚避免半删半写 */
+    @org.springframework.transaction.annotation.Transactional
     public int importFromProduct(Integer productId) {
         if (ObjectUtil.isEmpty(productId)) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
@@ -198,6 +201,8 @@ public class ProductKnowledgeService {
         productKnowledgeMapper.insert(knowledge);
     }
 
+    /** 级联删除（向量→切片→知识）必须原子，中途失败会留孤儿切片 */
+    @Transactional
     public void deleteById(Integer id) {
         productKnowledgeEmbeddingMapper.deleteByKnowledgeId(id);
         productKnowledgeChunkMapper.deleteByKnowledgeId(id);

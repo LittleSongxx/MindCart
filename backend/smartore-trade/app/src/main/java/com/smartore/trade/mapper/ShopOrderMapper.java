@@ -23,7 +23,7 @@ public interface ShopOrderMapper {
     @Select("select * from shop_order where order_no = #{orderNo} limit 1")
     ShopOrder selectByOrderNo(@Param("orderNo") String orderNo);
 
-    // ---- 状态机：全部条件 UPDATE，影响行数=0 即并发冲突/状态已变 ----
+    // ---- 状态机：全部条件 UPDATE，影响行数=0 即并发冲突/状态已变（转移表见 OrderStatus 枚举）----
 
     @Update("update shop_order set status = 'PAID', pay_time = now(), update_time = now() "
             + "where id = #{id} and status = 'PAYING'")
@@ -38,8 +38,13 @@ public interface ShopOrderMapper {
     int beginCancel(@Param("id") Integer id);
 
     @Update("update shop_order set status = 'CANCELLED', cancel_time = now(), update_time = now() "
-            + "where id = #{id} and status in ('CANCELLING','PAID')")
+            + "where id = #{id} and status = 'CANCELLING'")
     int finishCancel(@Param("id") Integer id);
+
+    /** 反向退款收口：迟到提交的扣款已退回后，PAY_FAILED → CANCELLED（与枚举转移表一致） */
+    @Update("update shop_order set status = 'CANCELLED', cancel_time = now(), update_time = now() "
+            + "where id = #{id} and status = 'PAY_FAILED'")
+    int markCancelledFromPayFailed(@Param("id") Integer id);
 
     @Update("update shop_order set status = 'SHIPPED', ship_time = now(), update_time = now() "
             + "where id = #{id} and status = 'PAID'")
@@ -54,4 +59,8 @@ public interface ShopOrderMapper {
 
     @Select("select * from shop_order where status = 'CANCELLING' and update_time < date_sub(now(), interval #{seconds} second) order by id asc limit 50")
     List<ShopOrder> selectStaleCancelling(@Param("seconds") Integer seconds);
+
+    /** PAY_FAILED 兜底扫描：正常应查无结果——若钱包侧存在 PAY 流水即为资错，需自动反向退款 */
+    @Select("select * from shop_order where status = 'PAY_FAILED' and update_time < date_sub(now(), interval #{seconds} second) order by id asc limit 50")
+    List<ShopOrder> selectStalePayFailed(@Param("seconds") Integer seconds);
 }

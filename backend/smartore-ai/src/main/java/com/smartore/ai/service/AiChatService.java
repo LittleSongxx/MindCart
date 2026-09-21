@@ -300,13 +300,14 @@ public class AiChatService {
         }
     }
 
-    /** 瞬时错误重试：仅网络异常/超时/429/5xx 重试，退避 500ms×attempt，最多 2 次重试 */
+    /** 瞬时错误重试：仅网络异常/超时/429/5xx 重试，指数退避 1s/2s/4s（封顶 8s），最多 3 次重试。
+     *  对模型限流的固定 500ms 线性退避过于激进，只会加剧 429。 */
     private HttpResponse executeWithRetry(String url, String body, String apiKey) {
         RuntimeException last = null;
-        for (int attempt = 0; attempt <= 2; attempt++) {
+        for (int attempt = 0; attempt <= 3; attempt++) {
             if (attempt > 0) {
                 try {
-                    Thread.sleep(500L * attempt);
+                    Thread.sleep(Math.min(1000L << (attempt - 1), 8000L));
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new CustomException("500", "调用AI模型被中断");

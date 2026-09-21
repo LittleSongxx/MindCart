@@ -5,7 +5,7 @@ public class OrderRequestIdempotency {
 
     private Integer id;
     private String requestId;
-    /** 请求内容指纹（userId+商品行+金额），同 requestId 不同内容视为冲突 */
+    /** 请求内容指纹（userId+收货人三要素）。购物车属服务端状态且下单后即清空，不参与指纹；同 requestId 重放=返回原订单，同 requestId 不同内容视为冲突 */
     private String requestHash;
     private Integer orderId;
     /** 关联订单号（恢复任务反查用） */

@@ -65,6 +65,11 @@ public class TradeEventPublisher {
     /** 中继：每 3 秒重投未发布事件（含提交后首投失败的那些） */
     @Scheduled(fixedDelay = 3000)
     public void relayPending() {
+        // 重试耗尽的事件转 FAILED（可观察、可人工复位重投，见 V3 迁移注释），不再无限滞留在 PENDING
+        int failed = ledgerMapper.markFailedExhausted();
+        if (failed > 0) {
+            log.error("Outbox 事件重试耗尽转 FAILED，共 {} 条——Rabbit 可能长时间不可用，请人工处置后复位", failed);
+        }
         List<TradeEventLedger> pending = ledgerMapper.selectPending();
         for (TradeEventLedger event : pending) {
             boolean ok = publishOne(event);
@@ -84,9 +89,28 @@ public class TradeEventPublisher {
         }
     }
 
+    /**
+     * 投递并等待 broker confirm（publisher-confirm-type: correlated）。
+     * 只把 convertAndSend 返回当成功是"假成功"：broker nack（如 quorum 丢多数派）或消息不可路由时
+     * 账本会被误标 PUBLISHED 且永不重投——这里同步等 ack/return，异常照常走重试。
+     */
     private boolean publishOne(TradeEventLedger event) {
         try {
-            rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_EVENT, event.getPayload());
+            org.springframework.amqp.rabbit.connection.CorrelationData correlation =
+                    new org.springframework.amqp.rabbit.connection.CorrelationData(event.getEventId());
+            rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_EVENT, event.getPayload(), correlation);
+            org.springframework.amqp.rabbit.connection.CorrelationData.Confirm confirm =
+                    correlation.getFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (confirm != null && !confirm.isAck()) {
+                log.error("broker nack，事件待重投（eventId={}）：{}", event.getEventId(), confirm.getReason());
+                return false;
+            }
+            var returned = correlation.getReturned();
+            if (returned != null) {
+                log.error("消息不可路由（mandatory return），事件待重投（eventId={}）：{}",
+                        event.getEventId(), returned.getReplyText());
+                return false;
+            }
             return true;
         } catch (Exception e) {
             log.warn("事件投递失败（eventId={}）：{}", event.getEventId(), e.getMessage());

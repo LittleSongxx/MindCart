@@ -77,6 +77,7 @@ public class BusinessToolService {
         }
         BusinessToolResult result = new BusinessToolResult();
         result.setToolCode("ORDER_STATUS_QUERY");
+        result.setUserId(order.getUserId());
         result.setOrderId(order.getId());
         result.setOrderNo(order.getOrderNo());
         result.setOrderStatus(order.getStatus());

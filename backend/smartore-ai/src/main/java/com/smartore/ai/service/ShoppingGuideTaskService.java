@@ -35,6 +35,8 @@ public class ShoppingGuideTaskService {
 
     /** 创建任务并立即入队异步执行；返回带 id 的任务实体（前端需要 id 做轮询） */
     public ShoppingGuideTask add(ShoppingGuideTask task) {
+        // 任务归属只认当前登录用户（需求文本/预算属个人信息，且任务会被回填真实姓名）
+        task.setUserId(com.smartore.common.context.UserContext.requireUserId());
         validate(task);
         if (ObjectUtil.isEmpty(task.getTaskNo())) {
             task.setTaskNo(BizNoGenerator.next("GT"));
@@ -57,9 +59,18 @@ public class ShoppingGuideTaskService {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
         }
         validate(task);
-        if (ObjectUtil.isNull(shoppingGuideTaskMapper.selectById(task.getId()))) {
+        ShoppingGuideTask existing = shoppingGuideTaskMapper.selectById(task.getId());
+        if (ObjectUtil.isNull(existing)) {
             throw new CustomException(ResultCodeEnum.PARAM_ERROR);
         }
+        requireOwnedOrAdmin(existing);
+        // RUNNING 中禁止重置重发：兜底扫描的超时重发窗口内，重置会导致同任务并发双跑
+        if ("RUNNING".equals(existing.getStatus())) {
+            throw new CustomException(ResultCodeEnum.ORDER_STATUS_ERROR, "任务执行中，请等待完成后再修改");
+        }
+        // 只更新任务内容字段：userId/状态/结果字段保持库内值，防请求体篡改归属
+        task.setUserId(existing.getUserId());
+        task.setTaskNo(existing.getTaskNo());
         task.setStatus("WAITING");
         task.setMatchedProductIds("");
         task.setRecommendationResult("");
@@ -75,6 +86,7 @@ public class ShoppingGuideTaskService {
         if (ObjectUtil.isNull(task)) {
             throw new CustomException(ResultCodeEnum.PARAM_ERROR);
         }
+        requireOwnedOrAdmin(task);
         task.setUpdateTime(cn.hutool.core.date.DateUtil.now());
         task.setStatus("WAITING");
         shoppingGuideTaskMapper.updateById(task);
@@ -82,16 +94,28 @@ public class ShoppingGuideTaskService {
     }
 
     public void deleteById(Integer id) {
+        ShoppingGuideTask task = shoppingGuideTaskMapper.selectById(id);
+        if (task != null) {
+            requireOwnedOrAdmin(task);
+        }
         shoppingGuideTaskMapper.deleteById(id);
     }
 
     public void deleteBatch(List<Integer> ids) {
         for (Integer id : ids) {
-            shoppingGuideTaskMapper.deleteById(id);
+            deleteById(id);
+        }
+    }
+
+    private void requireOwnedOrAdmin(ShoppingGuideTask task) {
+        if (!com.smartore.common.context.UserContext.isAdmin()
+                && !task.getUserId().equals(com.smartore.common.context.UserContext.requireUserId())) {
+            throw new CustomException(ResultCodeEnum.FORBIDDEN);
         }
     }
 
     public List<ShoppingGuideTask> selectAll(ShoppingGuideTask task) {
+        visibleCondition(task);
         List<ShoppingGuideTask> list = shoppingGuideTaskMapper.selectAll(task);
         nameFillService.fillUserNames(list, ShoppingGuideTask::getUserId, ShoppingGuideTask::setUserName);
         nameFillService.fillProducts(list, ShoppingGuideTask::getProductId, (row, p) -> row.setProductName(p.getName()));
@@ -99,8 +123,18 @@ public class ShoppingGuideTaskService {
     }
 
     public PageInfo<ShoppingGuideTask> selectPage(ShoppingGuideTask task, Integer pageNum, Integer pageSize) {
+        visibleCondition(task);
         PageHelper.startPage(pageNum, pageSize);
-        return PageInfo.of(shoppingGuideTaskMapper.selectAll(task));
+        List<ShoppingGuideTask> list = shoppingGuideTaskMapper.selectAll(task);
+        nameFillService.fillUserNames(list, ShoppingGuideTask::getUserId, ShoppingGuideTask::setUserName);
+        return PageInfo.of(list);
+    }
+
+    /** 普通用户只能看自己的任务（需求文本/预算/回填姓名属个人信息） */
+    private void visibleCondition(ShoppingGuideTask task) {
+        if (!com.smartore.common.context.UserContext.isAdmin()) {
+            task.setUserId(com.smartore.common.context.UserContext.requireUserId());
+        }
     }
 
     private void validate(ShoppingGuideTask task) {

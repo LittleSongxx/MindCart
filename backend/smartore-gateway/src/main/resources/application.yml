@@ -7,6 +7,14 @@ spring:
     name: smartore-gateway
   lifecycle:
     timeout-per-shutdown-phase: 20s
+  # Redis 令牌桶限流（RequestRateLimiter 的 key-resolver 与 store）。
+  # 必须显式配置：此前缺失时 Boot 回落到 localhost:6379，宿主机恰好有本地 Redis 才没暴露——
+  # 容器化/纯 mall 栈环境下会连不上，且限流状态与业务缓存不在同一实例。
+  data:
+    redis:
+      host: ${SMARTORE_REDIS_HOST:127.0.0.1}
+      port: ${SMARTORE_REDIS_PORT:26379}
+      password: ${SMARTORE_REDIS_PASSWORD:}
   cloud:
     nacos:
       discovery:
@@ -33,6 +41,14 @@ spring:
             - id: ai
               uri: lb://smartore-ai
               predicates: [ "Path=/aiModelConfig/**,/promptTemplate/**,/functionTool/**,/productTool/**,/businessTool/**,/productKnowledge/**,/productKnowledgeChunk/**,/productKnowledgeEmbedding/**,/agentRun/**,/agentStep/**,/shoppingGuideTask/**,/shoppingRecommendation/**,/shoppingQa/**,/shoppingReviewAnalysis/**,/shoppingGrowthReport/**" ]
+            # 语音导购（新增互补服务，未启动时仅 /voice/** 503，不影响其他路由）
+            # WS 升级与-plain HTTP 分开两条：lb:ws:// 只承接 WebSocket 握手
+            - id: voice-ws
+              uri: lb:ws://smartore-voice
+              predicates: [ "Path=/voice/ws" ]
+            - id: voice
+              uri: lb://smartore-voice
+              predicates: [ "Path=/voice/**" ]
           default-filters:
             - name: RequestRateLimiter
               args:
@@ -51,7 +67,7 @@ management:
         enabled: true
 
 smartore:
-  internal-token: ${SMARTORE_INTERNAL_TOKEN:}
+  gateway-token: ${SMARTORE_GATEWAY_TOKEN:}
   auth:
     jwt-secret: ${SMARTORE_JWT_SECRET:}
     public-paths:
@@ -76,11 +92,8 @@ smartore:
       - "POST /productParam/add"
       - "PUT /productParam/update"
       - "DELETE /productParam/delete/**"
-      - "POST /productDetail/add"
-      - "PUT /productDetail/update"
-      - "DELETE /productDetail/delete/**"
-      - "PUT /productReview/update"
-      - "DELETE /productReview/delete/**"
+      - "POST /productDetail/save"
+      - "PUT /productReview/audit"
       - "/afterSaleRule/**"
       - "/aiModelConfig/**"
       - "/promptTemplate/**"
@@ -97,10 +110,11 @@ smartore:
       - "PUT /shopOrder/ship/**"
       - "GET /shopOrder/selectPage"
       - "GET /shoppingQa/selectPage"
-      - "GET /shoppingQa/selectAll"
       - "DELETE /shoppingQa/delete/**"
       - "DELETE /shoppingGuideTask/delete/**"
       - "DELETE /shoppingRecommendation/delete/**"
+      - "/voice/debug/**"
+      - "/voice/admin/**"
 
 logging:
   level:

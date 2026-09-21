@@ -188,7 +188,8 @@
 
 <script setup>
 // 上传接口需要登录态：从本地存储取 token
-const uploadHeaders = { token: JSON.parse(localStorage.getItem('sys-user') || '{}').token || '' }
+// computed：重登录后取到的是新 token，不再固定为模块加载时的旧值
+const uploadHeaders = computed(() => ({ token: JSON.parse(localStorage.getItem('sys-user') || '{}').token || '' }))
 import { computed, reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import {ElMessage, ElMessageBox} from "element-plus";

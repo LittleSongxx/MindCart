@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${SMARTORE_MYSQL_ROOT_PASSWORD:?set in run/runtime.env}
+      # 传给 mysql-init 建号用（01-init-databases.sh 在容器内展开该变量）
+      SMARTORE_MYSQL_PASSWORD: ${SMARTORE_MYSQL_PASSWORD:?set in run/runtime.env}
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:33306:3306"
@@ -22,12 +24,18 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 768M
 
   mall-redis:
     image: redis:7.4.7-alpine
     container_name: mall-redis
     restart: unless-stopped
-    command: redis-server --requirepass ${SMARTORE_REDIS_PASSWORD:?set in run/runtime.env}
+    # notify-keyspace-events Ex：smartore-voice 的会话过期回流（SessionExpireListener）依赖过期事件；
+    # 对既有服务无影响（该开关只是多发布事件，不改变读写行为）
+    command: redis-server --requirepass ${SMARTORE_REDIS_PASSWORD:?set in run/runtime.env} --notify-keyspace-events Ex
     ports:
       - "127.0.0.1:26379:6379"
     volumes:
@@ -37,6 +45,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   mall-rabbitmq:
     image: rabbitmq:4.2.9-management
@@ -46,7 +58,7 @@ services:
       RABBITMQ_DEFAULT_USER: smartore
       RABBITMQ_DEFAULT_PASS: ${SMARTORE_RABBIT_PASSWORD:?set in run/runtime.env}
     ports:
-      - "127.0.0.1:5774:5672"     # AMQP（服务连接 5674）
+      - "127.0.0.1:5774:5672"     # AMQP（宿主机 5774 → 容器 5672，服务连 SMARTORE_RABBIT_PORT=5774）
       - "127.0.0.1:15774:15672"   # 管理界面
     volumes:
       - mall-rabbit-data:/var/lib/rabbitmq
@@ -55,6 +67,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   mall-nacos:
     image: nacos/nacos-server:v2.5.3
@@ -76,9 +92,39 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # smartore-voice 专用：pgvector 向量库（商品同步目录向量 + 语音会话状态）
+  # 与 MySQL 四库并列的中间件，其他服务不依赖它；容器停止不影响既有服务
+  mall-postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: mall-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${SMARTORE_POSTGRES_PASSWORD:?set in run/runtime.env}
+      POSTGRES_DB: smartore_voice
+      POSTGRES_USER: smartore
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:35432:5432"
+    volumes:
+      - mall-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartore -d smartore_voice"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   mall-mysql-data:
   mall-redis-data:
   mall-rabbit-data:
   mall-nacos-data:
+  mall-postgres-data:

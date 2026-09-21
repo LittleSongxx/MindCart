@@ -8,7 +8,8 @@ import java.util.List;
 
 public interface StockChangeRecordMapper {
 
-    /** 幂等占位：唯一键 (biz_no, product_id, change_type) 冲突返回 0 */
+    /** 幂等占位：唯一键 (biz_no, product_id, change_type) 冲突时返回 0。
+     *  IGNORE 吞掉非唯一键错误的残余风险由服务层 0 行后回查甄别（见 StockSagaService）。 */
     @org.apache.ibatis.annotations.Insert("""
             insert ignore into stock_change_record (biz_no, product_id, change_type, quantity, create_time)
             values (#{bizNo}, #{productId}, #{changeType}, #{quantity}, now())

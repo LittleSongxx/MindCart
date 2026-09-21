@@ -18,7 +18,6 @@ public interface ShoppingCartMapper {
     @Select("select * from shopping_cart where user_id = #{userId} and product_id = #{productId} limit 1")
     ShoppingCart selectByUserIdAndProductId(@Param("userId") Integer userId, @Param("productId") Integer productId);
 
-    List<ShoppingCart> selectAll(ShoppingCart shoppingCart);
 
     @Select("select * from shopping_cart where user_id = #{userId} order by id desc")
     List<ShoppingCart> selectByUserId(@Param("userId") Integer userId);

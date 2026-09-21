@@ -42,7 +42,7 @@ public class ShopOrderService {
         try {
             var result = goodsClient.reviewedItemIds(itemIds.stream().map(String::valueOf)
                     .collect(java.util.stream.Collectors.joining(",")));
-            if (result != null && "200".equals(result.getCode()) && result.getData() != null) {
+            if (result != null && ResultCodeEnum.SUCCESS.getCode().equals(result.getCode()) && result.getData() != null) {
                 var reviewed = new java.util.HashSet<>(result.getData());
                 for (ShopOrder order : orders) {
                     if (order.getItems() != null) {

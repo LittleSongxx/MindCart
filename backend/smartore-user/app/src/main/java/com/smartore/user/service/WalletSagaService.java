@@ -129,6 +129,8 @@ public class WalletSagaService {
 
     /**
      * 幂等占位：同 (business_no, type) 已存在返回 false（本单该步已生效，跳过资金变动）。
+     * 0 行后回查甄别：INSERT IGNORE 也会把超长/FK 等错误降级成 0 行——回查到行才是幂等重放，
+     * 查不到说明写入因其他原因失败，抛出让事务回滚，杜绝 saga 步骤"假成功"。
      */
     private boolean insertFlowIgnore(String orderNo, String type, BigDecimal signedAmount, Integer userId, String remark) {
         WalletRecord record = new WalletRecord();
@@ -139,13 +141,21 @@ public class WalletSagaService {
         record.setBusinessNo(orderNo);
         record.setRemark(remark);
         record.setCreateTime(cn.hutool.core.date.DateUtil.now());
-        return walletRecordMapper.insertIgnore(record) > 0;
+        if (walletRecordMapper.insertIgnore(record) > 0) {
+            return true;
+        }
+        if (walletRecordMapper.selectByBizNoAndType(orderNo, type) != null) {
+            return false;
+        }
+        throw new CustomException(ResultCodeEnum.SYSTEM_ERROR, "钱包流水写入失败（非唯一键冲突，事务回滚）");
     }
 
     private void fillBalanceAfter(String orderNo, String type) {
         WalletRecord record = walletRecordMapper.selectByBizNoAndType(orderNo, type);
         Integer userId = record.getUserId();
-        User user = userMapper.selectById(userId);
+        // FOR UPDATE 当前读：并发同用户操作被行锁串行化，balance_after 取到含本事务变动的最新值，
+        // 流水链构成严格连续的对账口径
+        User user = userMapper.selectByIdForUpdate(userId);
         walletRecordMapper.updateBalanceAfter(record.getId(), user.getBalance());
     }
 }

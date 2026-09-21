@@ -15,4 +15,10 @@ public interface AiModelConfigMapper {
     AiModelConfig selectById(Integer id);
 
     List<AiModelConfig> selectAll(AiModelConfig aiModelConfig);
+
+    /** 同类型互斥启用：除指定行外全部禁用（单条原子 UPDATE） */
+    @org.apache.ibatis.annotations.Update("update ai_model_config set is_enabled = 0, update_time = now() "
+            + "where model_type = #{modelType} and id != #{keepId} and is_enabled = 1")
+    int disableOthersOfModelType(@org.apache.ibatis.annotations.Param("modelType") String modelType,
+                                 @org.apache.ibatis.annotations.Param("keepId") Integer keepId);
 }

@@ -39,8 +39,8 @@
 
 <script setup>
 // 上传接口需要登录态：从本地存储取 token
-const uploadHeaders = { token: JSON.parse(localStorage.getItem('sys-user') || '{}').token || '' }
-import { reactive } from "vue";
+const uploadHeaders = computed(() => ({ token: JSON.parse(localStorage.getItem('sys-user') || '{}').token || '' }))
+import { computed, reactive } from "vue";
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 

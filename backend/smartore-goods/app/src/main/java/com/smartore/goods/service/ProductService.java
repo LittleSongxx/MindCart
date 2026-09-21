@@ -10,6 +10,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,6 +23,8 @@ public class ProductService {
     @Resource
     private com.smartore.goods.mapper.StockMapper stockMapper;
 
+    /** 商品与库存权威表双写必须在同一本地事务：中途崩溃会出现"无 stock 行"的商品，之后扣减永远失败 */
+    @Transactional
     public void add(Product product) {
         validate(product);
         if (ObjectUtil.isEmpty(product.getProductNo())) {
@@ -40,6 +43,7 @@ public class ProductService {
         stockMapper.upsert(product.getId(), product.getStockQuantity() == null ? 0 : product.getStockQuantity());
     }
 
+    @Transactional
     public void updateById(Product product) {
         if (ObjectUtil.isEmpty(product.getId())) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);

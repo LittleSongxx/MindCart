@@ -68,7 +68,17 @@ public class StockSagaService {
         record.setProductId(productId);
         record.setChangeType(type);
         record.setQuantity(quantity);
-        return stockChangeRecordMapper.insertIgnore(record) > 0;
+        if (stockChangeRecordMapper.insertIgnore(record) > 0) {
+            return true;
+        }
+        // 0 行后回查甄别：回查到行=幂等重放（该步早已生效，返回 false 跳过库存变动）；
+        // 查不到=写入因非唯一键原因被 INSERT IGNORE 吞掉，抛出让整批回滚，杜绝"假成功"
+        boolean replayed = stockChangeRecordMapper.selectByBizNoAndType(orderNo, type).stream()
+                .anyMatch(r -> productId.equals(r.getProductId()));
+        if (replayed) {
+            return false;
+        }
+        throw new CustomException(ResultCodeEnum.SYSTEM_ERROR, "库存流水写入失败（非唯一键冲突，整批回滚）");
     }
 
     private void validate(StockOpRequest request) {

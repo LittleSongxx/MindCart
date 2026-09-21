@@ -77,8 +77,7 @@ public class UserController {
         User user = new User();
         user.setUsername(account.getUsername());
         user.setPassword(account.getPassword());
-        user.setRole("USER");
-        userService.add(user);
+        userService.register(user);
         return Result.success();
     }
 

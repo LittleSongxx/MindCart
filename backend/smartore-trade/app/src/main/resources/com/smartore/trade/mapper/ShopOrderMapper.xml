@@ -3,10 +3,11 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smartore.trade.mapper.ShopOrderMapper">
 
+    <!-- 跨库 JOIN 已拆：user 表在 smartore_user 库（曾因 left join user 连续 500）；
+         买家名当前无消费方，如需展示由服务层经 user 服务批量回填 -->
     <select id="selectAll" resultType="com.smartore.trade.entity.ShopOrder">
-        select so.*, u.name as user_name
+        select so.*
         from shop_order so
-        left join `user` u on so.user_id = u.id
         <where>
             <if test="orderNo != null"> and so.order_no like concat('%', #{orderNo}, '%')</if>
             <if test="userId != null"> and so.user_id = #{userId}</if>

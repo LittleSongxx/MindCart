@@ -7,10 +7,12 @@
 
     <section class="filter-bar">
       <el-select v-model="data.status" clearable placeholder="全部状态" @change="load" @clear="load">
+        <el-option label="支付处理中" value="PAYING"></el-option>
         <el-option label="待发货" value="PAID"></el-option>
         <el-option label="待收货" value="SHIPPED"></el-option>
         <el-option label="已完成" value="COMPLETED"></el-option>
         <el-option label="已取消" value="CANCELLED"></el-option>
+        <el-option label="支付失败" value="PAY_FAILED"></el-option>
       </el-select>
       <el-button type="primary" @click="load">查询</el-button>
     </section>

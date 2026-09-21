@@ -16,7 +16,6 @@
             <if test="rating != null"> and pr.rating = #{rating}</if>
             <if test="auditStatus != null"> and pr.audit_status = #{auditStatus}</if>
             <if test="productName != null"> and p.name like concat('%', #{productName}, '%')</if>
-            <if test="orderNo != null"> and so.order_no like concat('%', #{orderNo}, '%')</if>
         </where>
         order by pr.id desc
     </select>

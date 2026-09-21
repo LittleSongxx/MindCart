@@ -1,6 +1,6 @@
 # Smartore 架构说明
 
-> 决策依据见 `docs/adr/0001-0005`；本文讲「现在长什么样、请求怎么走」。
+> 决策依据见 `docs/adr/0001-0011`；本文讲「现在长什么样、请求怎么走」。
 
 ## 分层与模块
 
@@ -16,6 +16,9 @@ backend/
 │                            app: 购物车/OrderSagaService+OrderTxService/幂等表/Outbox/恢复任务 + internal
 └── smartore-ai/             模型配置(加密)/提示词/SpringAiModelFactory/RAG/AgentExecutor+工具注册表/
                              问答/分析报告/MQ消费者(导购/向量/事件镜像)/NameFillService
+└── smartore-voice/          语音导购通道（ADR-0011）：ASR/TTS omni 实时会话 + 意图编排状态机 +
+                             pgvector 同步目录检索 + 三级记忆 + 前端代执行交易（order_action/order_result）；
+                             自带 PG(smartore_voice)，业务事实经 Feign /internal/** 取自 goods/user/trade
 ```
 
 ## 一次下单的完整路径
@@ -60,13 +63,13 @@ AgentExecutor(工具注册表): system消息(工具清单自动生成)
 
 ## 可观测性
 
-- 指标：`/actuator/prometheus`（5服务）→ Prometheus(15s) → Grafana 总览/LLM画像
+- 指标：`/actuator/prometheus`（6服务，含 voice/9105）→ Prometheus(15s) → Grafana 总览/LLM画像
 - 打点：`smartore.llm.call{kind=chat|embedding|agent, model, outcome}` 耗时直方图
-- 日志：traceId（网关生成→信任头→服务MDC→Feign透传）贯穿五服务
+- 日志：traceId（网关生成→信任头→服务MDC→Feign透传）贯穿六服务
 - 告警：服务宕/5xx比例/堆内存/LLM错误率/LLM P95（ops/monitoring/alerts.yml）
 
 ## 部署形态
 
-- **本地（mall 栈）**：`deploy/compose.yaml`（mysql/redis/rabbit/nacos）+
+- **本地（mall 栈）**：`deploy/compose.yaml`（mysql/redis/rabbit/nacos/postgres(pgvector，voice 专用)）+
   `ops/monitoring/compose.monitoring.yaml`（prometheus/grafana）+ dev.sh 起服务
 - **集群**：`ops/`（四动词CI网关、deploy.sh健康门禁、systemd、nginx、recon.sh 对账 cron）

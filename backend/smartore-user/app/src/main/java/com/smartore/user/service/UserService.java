@@ -28,23 +28,42 @@ public class UserService {
     /** 管理员新建用户未填密码时的默认密码 */
     private static final String DEFAULT_PASSWORD = "123456";
 
+    /** 登录防时序枚举：用户不存在时也对固定哈希跑一次 BCrypt，消除响应时间差 */
+    private static final String DUMMY_BCRYPT_HASH =
+            "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
     @Resource
     private UserMapper userMapper;
     @Resource
     private TokenService tokenService;
     @Resource
     private BCryptPasswordEncoder passwordEncoder;
+    @Resource
+    private com.smartore.user.mapper.WalletRecordMapper walletRecordMapper;
+    @Resource
+    private com.smartore.user.mapper.UserAddressMapper userAddressMapper;
 
     public User login(User request) {
         User dbUser = userMapper.selectByUsername(request.getUsername());
-        if (ObjectUtil.isNull(dbUser)
-                || StrUtil.isBlank(dbUser.getPassword())
-                || !passwordEncoder.matches(request.getPassword(), dbUser.getPassword())) {
-            // 用户不存在与密码错误统一提示，避免账号枚举
+        if (ObjectUtil.isNull(dbUser) || StrUtil.isBlank(dbUser.getPassword())) {
+            passwordEncoder.matches(StrUtil.nullToEmpty(request.getPassword()), DUMMY_BCRYPT_HASH);
+            throw new CustomException(ResultCodeEnum.USER_ACCOUNT_ERROR);
+        }
+        if (!passwordEncoder.matches(StrUtil.nullToEmpty(request.getPassword()), dbUser.getPassword())) {
             throw new CustomException(ResultCodeEnum.USER_ACCOUNT_ERROR);
         }
         dbUser.setToken(tokenService.create(dbUser.getId(), dbUser.getRole()));
         return sanitize(dbUser);
+    }
+
+    /** 公开注册：密码必填且≥4位（默认密码只保留给管理员建号路径） */
+    public void register(User user) {
+        if (StrUtil.isBlank(user.getUsername()) || StrUtil.isBlank(user.getPassword())
+                || user.getPassword().length() < 4) {
+            throw new CustomException(ResultCodeEnum.PARAM_ERROR, "用户名与密码必填，密码至少 4 位");
+        }
+        user.setRole("USER");
+        add(user);
     }
 
     public void add(User user) {
@@ -105,13 +124,18 @@ public class UserService {
         userMapper.updateById(update);
     }
 
+    /** 删除用户：钱包流水与地址有 FK 约束，先在同一事务内清理子表再删主表 */
+    @org.springframework.transaction.annotation.Transactional
     public void deleteById(Integer id) {
         if (id != null && id.equals(UserContext.getUserIdOrNull())) {
             throw new CustomException(ResultCodeEnum.PARAM_ERROR, "不能删除当前登录账号");
         }
+        walletRecordMapper.deleteByUserId(id);
+        userAddressMapper.deleteByUserId(id);
         userMapper.deleteById(id);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void deleteBatch(List<Integer> ids) {
         for (Integer id : ids) {
             deleteById(id);

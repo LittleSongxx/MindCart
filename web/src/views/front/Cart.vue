@@ -79,7 +79,7 @@
       </el-form>
       <template #footer>
         <el-button @click="data.orderVisible = false">取消</el-button>
-        <el-button type="primary" @click="createOrder">余额支付</el-button>
+        <el-button type="primary" :loading="data.orderSubmitting" @click="createOrder">余额支付</el-button>
       </template>
     </el-dialog>
   </div>
@@ -227,16 +227,16 @@ const openOrder = () => {
 
 const createOrder = () => {
   orderFormRef.value.validate(valid => {
-    if (!valid) {
+    if (!valid || data.orderSubmitting) {
       return
     }
     // requestId 幂等键：同一次提交重试复用（防双击/网络重试重复下单）
     if (!data.orderRequestId) {
       data.orderRequestId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()))
     }
+    data.orderSubmitting = true
     request.post('/shopOrder/create', {
       requestId: data.orderRequestId,
-      userId: data.user.id,
       receiverName: data.orderForm.receiverName,
       receiverPhone: data.orderForm.receiverPhone,
       receiverAddress: data.orderForm.receiverAddress
@@ -249,8 +249,12 @@ const createOrder = () => {
         loadUser()
         router.push('/front/order')
       } else {
+        // 失败后必须换新 requestId：后端幂等记录已置 FAILED，复用旧键只会一直报"上次提交已失败"
+        data.orderRequestId = null
         ElMessage.error(res.msg)
       }
+    }).finally(() => {
+      data.orderSubmitting = false
     })
   })
 }

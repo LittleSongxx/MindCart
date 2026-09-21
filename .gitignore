@@ -25,3 +25,6 @@ upload/
 
 # ---- local infra data ----
 deploy/data/
+
+# 本地起停的进程号文件，随环境变化不应入库
+run/*.pid

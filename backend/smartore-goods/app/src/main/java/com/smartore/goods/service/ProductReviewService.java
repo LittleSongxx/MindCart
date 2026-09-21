@@ -50,11 +50,13 @@ public class ProductReviewService {
             // 展示名缺失不阻塞评价列表
         }
     }
-public void add(ProductReview productReview) {
+    public void add(ProductReview productReview) {
+        // 身份只认网关注入的当前用户，请求体里的 userId 一律丢弃（防冒名评价）
+        productReview.setUserId(com.smartore.common.context.UserContext.requireUserId());
         validate(productReview);
-        // 购买资格校验（该用户完成过含此商品的订单）——订单在交易域，经 Feign 查询
-        com.smartore.common.result.Result<Boolean> owned =
-                orderClient.ownsProduct(productReview.getUserId(), productReview.getProductId());
+        // 购买资格校验（精确到订单行）：该用户名下已完成订单的该行确实买了这个商品
+        com.smartore.common.result.Result<Boolean> owned = orderClient.ownsOrderItem(
+                productReview.getUserId(), productReview.getOrderItemId(), productReview.getProductId());
         if (owned == null || !Boolean.TRUE.equals(owned.getData())) {
             throw new CustomException(ResultCodeEnum.PARAM_ERROR, "只有完成过该商品订单的用户才能评价");
         }
@@ -73,21 +75,34 @@ public void add(ProductReview productReview) {
         if (ObjectUtil.isEmpty(productReview.getId()) || ObjectUtil.isEmpty(productReview.getAuditStatus())) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
         }
+        // 网关 RBAC 已限 ADMIN；服务侧再校验一次，直连调用也过不去
+        if (!com.smartore.common.context.UserContext.isAdmin()) {
+            throw new CustomException(ResultCodeEnum.FORBIDDEN);
+        }
         productReview.setUpdateTime(DateUtil.now());
         productReviewMapper.updateById(productReview);
     }
 
     public List<ProductReview> selectAll(ProductReview productReview) {
+        visibleCondition(productReview);
         List<ProductReview> list = productReviewMapper.selectAll(productReview);
         fillUserNames(list);
         return list;
     }
 
     public PageInfo<ProductReview> selectPage(ProductReview productReview, Integer pageNum, Integer pageSize) {
+        visibleCondition(productReview);
         PageHelper.startPage(pageNum, pageSize);
         List<ProductReview> list = productReviewMapper.selectAll(productReview);
         fillUserNames(list);
         return PageInfo.of(list);
+    }
+
+    /** 普通用户只能看到已过审评价（REJECTED/PENDING 不外泄）；管理员按条件全量 */
+    private void visibleCondition(ProductReview productReview) {
+        if (!com.smartore.common.context.UserContext.isAdmin()) {
+            productReview.setAuditStatus("APPROVED");
+        }
     }
 
     private void validate(ProductReview productReview) {

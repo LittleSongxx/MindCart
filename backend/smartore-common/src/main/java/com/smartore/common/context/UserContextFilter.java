@@ -15,23 +15,36 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * 服务入口统一过滤器：
- * 1. 剥掉外部请求伪造的信任头（X-User-Id / X-User-Role），身份只能来自网关；
- * 2. 若配置了内部令牌（生产/集群必须配置），强校验请求确实来自网关；
- * 3. 装载 UserContext 供业务读取当前用户；
- * 4. traceId 进 MDC，日志全链路可追踪；网关没带就自己生成兜底。
+ * 服务入口统一过滤器（双凭证信任模型）：
+ * 1. X-Gateway-Token：网关注入，证明用户流量通过了网关 JWT 认证；
+ * 2. X-Internal-Token：集群内 Feign 调用携带，/internal/** 唯一接受的凭证——
+ *    用户流量即使因路由误配/路径穿越到达内部接口也会被拒；
+ * 3. 两个令牌启动期强制校验非空（dev.sh bootstrap 自动生成），杜绝"未配置即放行"的 fail-open；
+ * 4. 装载 UserContext 供业务读取当前用户；
+ * 5. traceId 进 MDC，日志全链路可追踪；网关没带就自己生成兜底。
  */
 @Component
-public class UserContextFilter extends OncePerRequestFilter {
+public class UserContextFilter extends OncePerRequestFilter implements org.springframework.beans.factory.InitializingBean {
 
     private static final String MDC_TRACE_ID = "traceId";
 
     @Value("${smartore.internal-token:}")
     private String internalToken;
 
+    @Value("${smartore.gateway-token:}")
+    private String gatewayToken;
+
+    @Override
+    public void afterPropertiesSet() {
+        if (internalToken == null || internalToken.isBlank() || gatewayToken == null || gatewayToken.isBlank()) {
+            throw new IllegalStateException(
+                    "smartore.internal-token 与 smartore.gateway-token 必须配置（scripts/dev.sh bootstrap 自动生成）");
+        }
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // 监控探活走集群内网，不参与内部令牌校验
+        // 监控探活走集群内网，不参与令牌校验
         return request.getRequestURI().startsWith("/actuator/");
     }
 
@@ -39,15 +52,17 @@ public class UserContextFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         try {
-            // 内部令牌校验：配置了就必须匹配，保证绕不过网关直连服务
-            if (internalToken != null && !internalToken.isBlank()) {
-                String provided = request.getHeader(HeaderNames.X_INTERNAL_TOKEN);
-                if (!internalToken.equals(provided)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
-                }
+            String uri = request.getRequestURI();
+            boolean internalCall = uri.startsWith("/internal/") || uri.equals("/internal");
+            boolean fromCluster = constantTimeEquals(internalToken, request.getHeader(HeaderNames.X_INTERNAL_TOKEN));
+            // /internal/** 只认集群内凭证；普通接口接受网关转发或集群内调用
+            boolean fromGateway = constantTimeEquals(gatewayToken, request.getHeader(HeaderNames.X_GATEWAY_TOKEN));
+            boolean allowed = internalCall ? fromCluster : (fromCluster || fromGateway);
+            if (!allowed) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
             }
-            // 通过校验（或开发态未配置令牌）后，信任网关注入的身份头
+            // 通过凭证校验后，信任网关注入的身份头
             String userId = sanitize(request.getHeader(HeaderNames.X_USER_ID));
             String role = sanitize(request.getHeader(HeaderNames.X_USER_ROLE));
             UserContext.set(parseUserId(userId), role);
@@ -84,5 +99,15 @@ public class UserContextFilter extends OncePerRequestFilter {
         }
         String cleaned = value.trim();
         return cleaned.contains("\n") || cleaned.contains("\r") ? null : cleaned;
+    }
+
+    /** 常数时间比较，避免令牌比对的时序侧信道 */
+    private boolean constantTimeEquals(String expected, String provided) {
+        if (expected == null || provided == null) {
+            return false;
+        }
+        return java.security.MessageDigest.isEqual(
+                expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                provided.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

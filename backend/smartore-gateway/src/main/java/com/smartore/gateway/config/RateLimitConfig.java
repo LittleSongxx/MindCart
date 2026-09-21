@@ -20,12 +20,11 @@ public class RateLimitConfig {
             if (userId != null) {
                 return Mono.just("user:" + userId);
             }
-            String ip = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
-            if (ip == null || ip.isBlank()) {
-                ip = exchange.getRequest().getRemoteAddress() == null
-                        ? "unknown"
-                        : exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
-            }
+            // 未认证请求（登录/注册/文件下载）按连接对端 IP 限流。
+            // 不信任 X-Forwarded-For：该头可任意伪造，用它当 key 等于对暴破无限速。
+            String ip = exchange.getRequest().getRemoteAddress() == null
+                    ? "unknown"
+                    : exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
             return Mono.just("ip:" + ip);
         };
     }

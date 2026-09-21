@@ -1,4 +1,5 @@
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 // 大模型返回的内容常带 Markdown 语法（标题、列表、粗体、表格），
 // 直接放在页面上会显示成一堆 # 和 *，所以统一在这里转成 HTML 再渲染。
@@ -20,5 +21,6 @@ export function renderMarkdown(text, emptyText = '暂无内容') {
   if (!text || !String(text).trim()) {
     return `<p class="md-empty">${emptyText}</p>`
   }
-  return marked.parse(String(text))
+  // LLM 分析的内容可能包含用户提交的原始文本（如评价），渲染前必须消毒防存储型 XSS
+  return DOMPurify.sanitize(marked.parse(String(text)))
 }

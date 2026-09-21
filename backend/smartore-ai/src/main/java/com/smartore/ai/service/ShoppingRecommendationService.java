@@ -7,6 +7,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,6 +20,8 @@ public class ShoppingRecommendationService {
     @Resource
     private ShoppingRecommendationMapper shoppingRecommendationMapper;
 
+    /** delete+insert 重写必须在同一事务：交错失败会留下旧推荐与新推荐并存的混合状态 */
+    @Transactional
     public void saveTaskRecommendations(Integer taskId, List<ShoppingRecommendation> recommendations) {
         shoppingRecommendationMapper.deleteByTaskId(taskId);
         if (recommendations == null || recommendations.isEmpty()) {

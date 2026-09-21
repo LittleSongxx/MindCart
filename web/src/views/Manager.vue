@@ -157,6 +157,10 @@
               <el-icon><DataAnalysis /></el-icon>
               <span>AI运营增长报告</span>
             </el-menu-item>
+            <el-menu-item index="/manager/voiceSession">
+              <el-icon><Microphone /></el-icon>
+              <span>语音会话与归因</span>
+            </el-menu-item>
           </el-sub-menu>
 
           <el-menu-item @click="logout">
@@ -176,14 +180,14 @@
 import { reactive } from "vue";
 import router from "@/router/index.js";
 import { ElMessage } from "element-plus";
-import { Bell, Box, ChatDotRound, CollectionTag, Connection, DataAnalysis, Document, Files, Goods, HomeFilled, MagicStick, Menu, Notebook, Service, Setting, Tickets, User } from "@element-plus/icons-vue";
+import { Bell, Box, ChatDotRound, CollectionTag, Connection, DataAnalysis, Document, Files, Goods, HomeFilled, MagicStick, Menu, Microphone, Notebook, Service, Setting, Tickets, User } from "@element-plus/icons-vue";
 
 // 各二级菜单分组包含的路由路径，用于进入页面时自动展开对应分组
 const menuGroups = {
   shop: ['/manager/user', '/manager/productCategory', '/manager/productBrand', '/manager/product', '/manager/productDetail', '/manager/shopOrder', '/manager/productReview', '/manager/afterSaleRule'],
   aiConfig: ['/manager/aiModelConfig', '/manager/promptTemplate', '/manager/functionTool', '/manager/productToolDebug', '/manager/businessToolDebug'],
   aiRag: ['/manager/productKnowledge', '/manager/productKnowledgeChunk', '/manager/productKnowledgeEmbedding'],
-  aiAgent: ['/manager/shoppingGuideTask', '/manager/agentRun', '/manager/agentStep', '/manager/shoppingRecommendation', '/manager/shoppingQa', '/manager/shoppingReviewAnalysis', '/manager/shoppingGrowthReport']
+  aiAgent: ['/manager/shoppingGuideTask', '/manager/agentRun', '/manager/agentStep', '/manager/shoppingRecommendation', '/manager/shoppingQa', '/manager/shoppingReviewAnalysis', '/manager/shoppingGrowthReport', '/manager/voiceSession']
 }
 
 // 根据当前路由找到它所属的分组，只默认展开当前所在分组，其余分组保持收缩

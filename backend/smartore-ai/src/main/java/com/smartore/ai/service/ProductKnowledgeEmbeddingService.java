@@ -301,7 +301,12 @@ public class ProductKnowledgeEmbeddingService {
     }
 
     private double cosine(double[] left, double[] right) {
-        int n = Math.min(left.length, right.length);
+        // 维度不一致 = 换过 embedding 模型后新旧向量混存：静默按前 n 维算会产出垃圾相似度，
+        // 必须显式判 0（检索层表现为"检索不到"，比错配召回可解释）
+        if (left.length != right.length) {
+            return 0;
+        }
+        int n = left.length;
         double dot = 0;
         for (int i = 0; i < n; i++) {
             dot += left[i] * right[i];
@@ -335,11 +340,16 @@ public class ProductKnowledgeEmbeddingService {
         if (ObjectUtil.isEmpty(vectorText)) {
             return new double[0];
         }
-        String[] values = vectorText.split(",");
-        double[] vector = new double[values.length];
-        for (int i = 0; i < values.length; i++) {
-            vector[i] = Double.parseDouble(values[i]);
+        try {
+            String[] values = vectorText.split(",");
+            double[] vector = new double[values.length];
+            for (int i = 0; i < values.length; i++) {
+                vector[i] = Double.parseDouble(values[i]);
+            }
+            return vector;
+        } catch (NumberFormatException e) {
+            // 脏数据按"无向量"处理（检索层降级），不让单行坏数据 500 整个检索
+            return new double[0];
         }
-        return vector;
     }
 }

@@ -19,6 +19,10 @@ public interface UserMapper {
     @Select("select * from `user` where id = #{id}")
     User selectById(Integer id);
 
+    /** 当前读（FOR UPDATE）：资金类流水计算 balance_after 时取最新已提交余额，保证流水链严格连续 */
+    @Select("select * from `user` where id = #{id} for update")
+    User selectByIdForUpdate(Integer id);
+
     @Select("select * from `user` where username = #{username}")
     User selectByUsername(String username);
 

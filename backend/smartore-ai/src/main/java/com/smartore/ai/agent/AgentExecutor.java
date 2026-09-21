@@ -112,6 +112,9 @@ public class AgentExecutor {
                     aiChatService.chatCompletionWithUsage(messages, buildToolsJson());
             JSONObject assistant = completion.getMessage();
             context.addTokens(completion.getPromptTokens(), completion.getCompletionTokens());
+            // 逐轮同步到 run：循环中途抛异常时（execute 的 catch）失败成本也能归因，与注释声称一致
+            run.setPromptTokens(context.getPromptTokens());
+            run.setCompletionTokens(context.getCompletionTokens());
             if (assistant.get("content") == null) {
                 assistant.set("content", "");
             }
@@ -179,7 +182,9 @@ public class AgentExecutor {
         List<Integer> matchedIds = new ArrayList<>();
         List<ShoppingRecommendation> recommendations = new ArrayList<>();
 
-        List<Integer> candidateIds = submissions.stream().map(s -> s.productId).toList();
+        // 模型重复提交同一商品是常见行为：不去重会让 toMap 直接 Duplicate key 炸掉整个任务
+        // （发生在全部 LLM token 已花完之后），也会落重复推荐行——这里按提交顺序去重保留首次
+        List<Integer> candidateIds = submissions.stream().map(s -> s.productId).distinct().toList();
         Map<Integer, ProductVO> productMap = candidateIds.isEmpty() ? Map.of()
                 : unwrap(goodsClient.getProducts(candidateIds)).stream()
                         .collect(Collectors.toMap(ProductVO::getId, Function.identity()));

@@ -16,4 +16,7 @@ public interface ProductFavoriteMapper {
     ProductFavorite selectByUserIdAndProductId(@Param("userId") Integer userId, @Param("productId") Integer productId);
 
     List<ProductFavorite> selectAll(ProductFavorite productFavorite);
+
+    @Select("select * from product_favorite where id = #{id}")
+    ProductFavorite selectById(Integer id);
 }

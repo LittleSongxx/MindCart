@@ -38,7 +38,7 @@ public class EmbeddingJobConsumer {
         Boolean locked = false;
         try {
             locked = redisTemplate.opsForValue().setIfAbsent(
-                    ProductKnowledgeEmbeddingService.LOCK_KEY, "1", Duration.ofMinutes(30));
+                    ProductKnowledgeEmbeddingService.LOCK_KEY, "1", Duration.ofHours(2));
             if (Boolean.FALSE.equals(locked)) {
                 // 已有批量任务在跑：确认消息，不重复执行
                 channel.basicAck(deliveryTag, false);

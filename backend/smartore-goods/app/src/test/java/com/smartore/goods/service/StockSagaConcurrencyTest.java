@@ -27,7 +27,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "spring.cloud.nacos.discovery.enabled=false",
-                "spring.cloud.nacos.config.enabled=false"
+                "spring.cloud.nacos.config.enabled=false",
+                // UserContextFilter 启动期强制双令牌非空（生产由 dev.sh bootstrap 注入），测试给占位值
+                "smartore.internal-token=test-internal-token",
+                "smartore.gateway-token=test-gateway-token"
         })
 @Testcontainers
 class StockSagaConcurrencyTest {

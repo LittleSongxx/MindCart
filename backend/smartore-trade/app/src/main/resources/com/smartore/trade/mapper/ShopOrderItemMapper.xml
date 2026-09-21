@@ -10,7 +10,7 @@
         order by soi.id asc
     </select>
 
-    <insert id="insert" parameterType="com.smartore.trade.entity.ShopOrderItem" useGeneratedKeys="true">
+    <insert id="insert" parameterType="com.smartore.trade.entity.ShopOrderItem" useGeneratedKeys="true" keyProperty="id">
         insert into shop_order_item
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="id != null">id,</if>

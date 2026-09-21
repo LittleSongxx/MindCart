@@ -25,6 +25,12 @@ spring:
         password: ${SMARTORE_NACOS_PASSWORD:nacos}
         group: ${SMARTORE_NACOS_GROUP:SMARTORE_GROUP}
         prefer-ip-address: true
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000   # 显式超时：readTimeout 必须 << STALE_SECONDS(60)，否则探测判失败与迟到提交撞车
+            read-timeout: 10000
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${SMARTORE_MYSQL_HOST:127.0.0.1}:${SMARTORE_MYSQL_PORT:33306}/smartore_ai?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
@@ -63,6 +69,12 @@ pagehelper:
   helper-dialect: mysql
 
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        # 不开 histogram，Micrometer 不发 *_seconds_bucket 序列，P95 告警/看板永远无数据
+        http.server.requests: true
+        smartore.llm.call: true
   endpoints:
     web:
       exposure:
@@ -74,6 +86,7 @@ management:
 
 smartore:
   internal-token: ${SMARTORE_INTERNAL_TOKEN:}
+  gateway-token: ${SMARTORE_GATEWAY_TOKEN:}
   model:
     crypto-key: ${SMARTORE_MODEL_CRYPTO_KEY:}
     chat:
