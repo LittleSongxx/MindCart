@@ -18,7 +18,9 @@ public interface ShopOrderMapper {
 
     List<ShopOrder> selectAll(ShopOrder shopOrder);
 
-    void deleteById(Integer id);
+    // 刻意不提供 delete：订单是账务事实，只走状态机（CANCELLED/PAY_FAILED）流转。
+    // （这里原本声明过一个无注解也无 XML 的 deleteById，一旦被调用就会抛 BindingException，
+    //   已删除；MapperWiringTest 会持续守住"声明的方法都有绑定"。）
 
     @Select("select * from shop_order where order_no = #{orderNo} limit 1")
     ShopOrder selectByOrderNo(@Param("orderNo") String orderNo);

@@ -29,6 +29,26 @@ jobs:
           cache: maven
       - name: mvn test（Testcontainers 自带 MySQL，Docker 内置）
         run: mvn -B -f backend/pom.xml test
+      - name: 打印覆盖率汇总（按模块）
+        # 不设阈值门禁：覆盖率只作为可见指标，卡构建会在演示/迭代期带来无谓阻塞
+        run: |
+          printf '%-24s %10s %10s %8s\n' 模块 指令数 未覆盖 覆盖率
+          for csv in $(find backend -path '*/target/site/jacoco/jacoco.csv' | sort); do
+            module=$(echo "$csv" | cut -d/ -f2)
+            awk -F, -v module="$module" '
+              NR > 1 { miss += $4 + $6; cov += $5 + $7 }
+              END {
+                total = miss + cov
+                printf "%-24s %10d %10d %7.1f%%\n", module, total, miss, (total ? cov * 100 / total : 0)
+              }' "$csv"
+          done
+      - name: 上传覆盖率报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jacoco
+          path: backend/**/target/site/jacoco/
+          if-no-files-found: error
 
   web:
     runs-on: ubuntu-latest

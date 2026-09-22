@@ -39,6 +39,8 @@
     <pagehelper.version>2.1.0</pagehelper.version>
     <hutool.version>5.8.25</hutool.version>
     <java-jwt.version>4.4.0</java-jwt.version>
+    <!-- JaCoCo 不在 Boot BOM 里，需显式钉版本 -->
+    <jacoco.version>0.8.13</jacoco.version>
   </properties>
 
   <dependencyManagement>
@@ -138,6 +140,31 @@
   </dependencies>
 
   <build>
+    <plugins>
+      <!-- 覆盖率：report 绑在 test 阶段而不是 verify —— dev.sh test 与 CI 都只跑 mvn test，
+           绑到 verify 会让"跑了测试却没有报告"。只出报告不设阈值门禁：
+           阈值在演示/迭代期容易卡住构建，收益不如让数字可见。 -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
