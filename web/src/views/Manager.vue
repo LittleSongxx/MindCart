@@ -2,8 +2,8 @@
   <div class="manager-container">
     <div class="manager-header">
       <div class="manager-header-left">
-        <img src="@/assets/imgs/logo.png" alt="Smartore">
-        <div class="title">Smartore</div>
+        <img src="@/assets/imgs/logo.png" alt="MindCart">
+        <div class="title">MindCart</div>
       </div>
       <div class="manager-header-center">
         <el-breadcrumb separator="/">

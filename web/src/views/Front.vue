@@ -2,8 +2,8 @@
   <div>
     <div class="front-header">
       <div class="front-header-left">
-        <img src="@/assets/imgs/logo.png" alt="Smartore">
-        <div class="title">Smartore</div>
+        <img src="@/assets/imgs/logo.png" alt="MindCart">
+        <div class="title">MindCart</div>
       </div>
       <div class="front-header-center">
           <el-menu :default-active="router.currentRoute.value.path" router mode="horizontal">

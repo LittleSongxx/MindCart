@@ -11,22 +11,22 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.smartore</groupId>
-  <artifactId>smartore-backend</artifactId>
+  <groupId>com.mindcart</groupId>
+  <artifactId>mindcart-backend</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>smartore-backend</name>
-  <description>Smartore AI shopping mall, Spring Cloud microservices</description>
+  <name>mindcart-backend</name>
+  <description>MindCart AI shopping mall, Spring Cloud microservices</description>
 
   <modules>
-    <module>smartore-common</module>
-    <module>smartore-gateway</module>
-    <module>smartore-user</module>
-    <module>smartore-goods</module>
-    <module>smartore-trade</module>
-    <module>smartore-ai</module>
-    <!-- 语音导购服务：新增互补，独立于 smartore-ai（ADR-0011） -->
-    <module>smartore-voice</module>
+    <module>mindcart-common</module>
+    <module>mindcart-gateway</module>
+    <module>mindcart-user</module>
+    <module>mindcart-goods</module>
+    <module>mindcart-trade</module>
+    <module>mindcart-ai</module>
+    <!-- 语音导购服务：新增互补，独立于 mindcart-ai（ADR-0011） -->
+    <module>mindcart-voice</module>
   </modules>
 
   <properties>
@@ -83,23 +83,23 @@
 
       <!-- 内部契约模块：消费方只依赖 api，不依赖 app 实现（契约先行） -->
       <dependency>
-        <groupId>com.smartore</groupId>
-        <artifactId>smartore-common</artifactId>
+        <groupId>com.mindcart</groupId>
+        <artifactId>mindcart-common</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.smartore</groupId>
-        <artifactId>smartore-user-api</artifactId>
+        <groupId>com.mindcart</groupId>
+        <artifactId>mindcart-user-api</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.smartore</groupId>
-        <artifactId>smartore-goods-api</artifactId>
+        <groupId>com.mindcart</groupId>
+        <artifactId>mindcart-goods-api</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.smartore</groupId>
-        <artifactId>smartore-trade-api</artifactId>
+        <groupId>com.mindcart</groupId>
+        <artifactId>mindcart-trade-api</artifactId>
         <version>${project.version}</version>
       </dependency>
 

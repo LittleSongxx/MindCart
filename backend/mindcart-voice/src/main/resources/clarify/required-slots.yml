@@ -1,0 +1,40 @@
+# 澄清规则：key 必须等于 voice_product.category_l2（= MindCart 类目名，单层）。
+# required 槽位不齐就追问；nice_to_have 只影响推荐精度不阻塞。
+笔记本电脑:
+  required: [category, budget]
+  nice_to_have: [brand, scenario]
+  scenario_options: ["办公", "学习", "游戏", "移动创作"]
+
+手机通讯:
+  required: [category, budget]
+  nice_to_have: [brand, scenario]
+
+耳机音箱:
+  required: [category, budget]
+  nice_to_have: [brand, scenario]
+  scenario_options: ["通勤", "运动", "居家", "游戏"]
+
+智能穿戴:
+  required: [category, budget]
+  nice_to_have: [brand, gender]
+
+运动鞋服:
+  required: [category, scenario, budget]
+  nice_to_have: [brand, gender]
+  scenario_options: ["跑步", "健身", "日常", "户外"]
+
+护肤套装:
+  required: [category, budget]
+  nice_to_have: [brand, skin_type]
+
+清洁电器:
+  required: [category, budget]
+  nice_to_have: [brand]
+
+厨房电器:
+  required: [category, budget]
+  nice_to_have: [brand]
+
+default:
+  required: [category, budget]
+  nice_to_have: [brand]

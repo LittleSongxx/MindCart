@@ -1,4 +1,4 @@
-# Smartore 应用栈（Docker 部署）：六个服务容器化，**复用 mall 中间件容器**——不新建任何
+# MindCart 应用栈（Docker 部署）：六个服务容器化，**复用 mall 中间件容器**——不新建任何
 # MySQL/Redis/RabbitMQ/Nacos/PG，全部通过外部网络 mall_default 以容器名互访。
 #
 # 前置：run/runtime.env 已 bootstrap；中间件已起且健康
@@ -9,11 +9,11 @@
 # 查看 / 停止：
 #   docker compose -f deploy/compose.apps.yaml ps
 #   docker compose -f deploy/compose.apps.yaml down
-# 浏览器入口：http://localhost:${SMARTORE_WEB_PORT:-8081}（web 容器，/api 反代到 gateway 容器）
+# 浏览器入口：http://localhost:${MINDCART_WEB_PORT:-8081}（web 容器，/api 反代到 gateway 容器）
 #
 # 与 jar 方式（scripts/dev.sh up）二选一，不能同时跑（端口冲突）。
 # 切回 jar 方式：docker compose -f deploy/compose.apps.yaml down && ./scripts/dev.sh up
-name: smartore-apps
+name: mindcart-apps
 
 networks:
   # 复用 mall 中间件所在网络；中间件容器名即主机名
@@ -34,27 +34,28 @@ x-app: &app
   environment: &app-env
     TZ: Asia/Shanghai
     JAVA_OPTS: "-XX:MaxRAMPercentage=75"
-    SMARTORE_MYSQL_HOST: mall-mysql
-    SMARTORE_MYSQL_PORT: "3306"
-    SMARTORE_REDIS_HOST: mall-redis
-    SMARTORE_REDIS_PORT: "6379"
-    SMARTORE_RABBIT_HOST: mall-rabbitmq
-    SMARTORE_RABBIT_PORT: "5672"
-    SMARTORE_NACOS_ADDR: mall-nacos:8848
+    MINDCART_MYSQL_HOST: mall-mysql
+    MINDCART_MYSQL_PORT: "3306"
+    MINDCART_REDIS_HOST: mall-redis
+    MINDCART_REDIS_PORT: "6379"
+    MINDCART_RABBIT_HOST: mall-rabbitmq
+    MINDCART_RABBIT_PORT: "5672"
+    MINDCART_NACOS_ADDR: mall-nacos:8848
 
 services:
   user:
     <<: *app
-    container_name: smartore-user
+    container_name: mindcart-user
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-user/app/target/smartore-user-app-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-user/app/target/mindcart-user-app-0.1.0-SNAPSHOT.jar }
     environment:
       <<: *app-env
-      # 上传文件落容器卷（runtime.env 里的 SMARTORE_FILE_DIR 是宿主路径，容器内不可用）
-      SMARTORE_FILE_DIR: /data/files
-      SMARTORE_FILE_BASE_URL: http://localhost:${SMARTORE_WEB_PORT:-8081}
+      # 上传文件落容器卷（runtime.env 里的 MINDCART_FILE_DIR 是宿主路径，容器内不可用）
+      # 文件下载 URL 的对外基址：本地=web 容器；生产在 runtime.env 设 MINDCART_FILE_PUBLIC_BASE_URL=https://域名/api
+      MINDCART_FILE_DIR: /data/files
+      MINDCART_FILE_BASE_URL: ${MINDCART_FILE_PUBLIC_BASE_URL:-http://localhost:8081}
     volumes:
       # 绑宿主 run/files（与 jar 方式共用同一份上传存储）：历史头像/图片在容器里同样可读
       - ../run/files:/data/files
@@ -71,11 +72,11 @@ services:
 
   goods:
     <<: *app
-    container_name: smartore-goods
+    container_name: mindcart-goods
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-goods/app/target/smartore-goods-app-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-goods/app/target/mindcart-goods-app-0.1.0-SNAPSHOT.jar }
     ports:
       - "127.0.0.1:9102:9102"
     deploy:
@@ -89,11 +90,11 @@ services:
 
   trade:
     <<: *app
-    container_name: smartore-trade
+    container_name: mindcart-trade
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-trade/app/target/smartore-trade-app-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-trade/app/target/mindcart-trade-app-0.1.0-SNAPSHOT.jar }
     ports:
       - "127.0.0.1:9103:9103"
     deploy:
@@ -107,11 +108,11 @@ services:
 
   ai:
     <<: *app
-    container_name: smartore-ai
+    container_name: mindcart-ai
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-ai/target/smartore-ai-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-ai/target/mindcart-ai-0.1.0-SNAPSHOT.jar }
     ports:
       - "127.0.0.1:9104:9104"
     deploy:
@@ -125,20 +126,20 @@ services:
 
   voice:
     <<: *app
-    container_name: smartore-voice
+    container_name: mindcart-voice
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-voice/target/smartore-voice-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-voice/target/mindcart-voice-0.1.0-SNAPSHOT.jar }
     environment:
       <<: *app-env
       JAVA_OPTS: "-XX:MaxRAMPercentage=75"
-      # 语音服务自带的 PG（mall-postgres 容器，库 smartore_voice，Flyway 自管）
-      SMARTORE_POSTGRES_HOST: mall-postgres
-      SMARTORE_POSTGRES_PORT: "5432"
+      # 语音服务自带的 PG（mall-postgres 容器，库 mindcart_voice，Flyway 自管）
+      MINDCART_POSTGRES_HOST: mall-postgres
+      MINDCART_POSTGRES_PORT: "5432"
       # 本地演示态：开放 /voice/debug/**（网关 ADMIN 规则 + X-Gateway/X-Internal-Token 双重保护）。
       # 生产部署置 false，调试/管理端点直接 404。
-      SMARTORE_VOICE_DEBUG: "true"
+      MINDCART_VOICE_DEBUG: "true"
     ports:
       - "127.0.0.1:9105:9105"
     # voice 依赖 ai 的知识检索与模型配置下发（LlmConfigResolver 启动拉取），后于 ai 起
@@ -155,11 +156,11 @@ services:
 
   gateway:
     <<: *app
-    container_name: smartore-gateway
+    container_name: mindcart-gateway
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args: { JAR_FILE: smartore-gateway/target/smartore-gateway-0.1.0-SNAPSHOT.jar }
+      args: { JAR_FILE: mindcart-gateway/target/mindcart-gateway-0.1.0-SNAPSHOT.jar }
     # 网关最后起：等业务服务注册进 Nacos，避免首个请求 503
     depends_on:
       user:  { condition: service_healthy }
@@ -181,7 +182,7 @@ services:
   # 前端静态站 + /api 反代（浏览器唯一入口；SPA 构建产物由宿主机 npm run build 生成）
   web:
     image: nginx:1.27-alpine
-    container_name: smartore-web
+    container_name: mindcart-web
     restart: unless-stopped
     networks: [ mall ]
     depends_on:
@@ -190,7 +191,7 @@ services:
       - ../web/dist:/usr/share/nginx/html:ro
       - ./nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "127.0.0.1:${SMARTORE_WEB_PORT:-8081}:80"
+      - "127.0.0.1:${MINDCART_WEB_PORT:-8081}:80"
     healthcheck:
       # 必须写 127.0.0.1：busybox wget 会把 localhost 解析到 ::1，而 nginx 默认只监听 IPv4 → 误报 unhealthy
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]

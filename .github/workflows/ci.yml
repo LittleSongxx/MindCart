@@ -34,7 +34,7 @@ jobs:
         run: |
           printf '%-24s %10s %10s %8s\n' 模块 指令数 未覆盖 覆盖率
           for csv in $(find backend -path '*/target/site/jacoco/jacoco.csv' | sort); do
-            # 标签取到子模块一级（backend/smartore-trade/app/target/... → smartore-trade/app）：
+            # 标签取到子模块一级（backend/mindcart-trade/app/target/... → mindcart-trade/app）：
             # 只取第二段会让 trade 的 api 与 app 两个模块打印成同一个名字，读者分不清哪行是哪个
             module=${csv#backend/}
             module=${module%%/target/*}
@@ -82,20 +82,20 @@ jobs:
           fetch-depth: 0
       - name: 配置 deploy key（服务器网关仅放行 upload/deploy/status/rollback 四动词）
         run: |
-          install -m600 /dev/stdin ~/deploy_key <<<"${{ secrets.SMARTORE_DEPLOY_KEY }}"
+          install -m600 /dev/stdin ~/deploy_key <<<"${{ secrets.MINDCART_DEPLOY_KEY }}"
           mkdir -p ~/.ssh
           echo "${{ secrets.ECS_HOST_KEY }}" >> ~/.ssh/known_hosts
       - name: 回滚（inputs.rollback=true 时）
         if: ${{ inputs.rollback }}
-        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} rollback
+        run: $SSH_CMD ${{ secrets.MINDCART_DEPLOY_HOST }} rollback
       - name: 打 bundle 并上传
         if: ${{ !inputs.rollback }}
         run: |
           git bundle create deploy.bundle HEAD
-          $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} upload < deploy.bundle
+          $SSH_CMD ${{ secrets.MINDCART_DEPLOY_HOST }} upload < deploy.bundle
       - name: 部署 + 健康门禁（失败即 exit 1）
         if: ${{ !inputs.rollback }}
-        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} deploy
+        run: $SSH_CMD ${{ secrets.MINDCART_DEPLOY_HOST }} deploy
       - name: 部署后状态
         if: always()
-        run: $SSH_CMD ${{ secrets.SMARTORE_DEPLOY_HOST }} status || true
+        run: $SSH_CMD ${{ secrets.MINDCART_DEPLOY_HOST }} status || true

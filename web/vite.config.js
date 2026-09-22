@@ -92,7 +92,7 @@ export default defineConfig({
         target: 'http://localhost:9080',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
-        ws: true,   // 语音导购 /voice/ws 走 WebSocket（经网关 lb:ws://smartore-voice）
+        ws: true,   // 语音导购 /voice/ws 走 WebSocket（经网关 lb:ws://mindcart-voice）
       },
     },
   },

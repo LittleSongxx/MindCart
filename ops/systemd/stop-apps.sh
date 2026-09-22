@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 停止六服务：SIGTERM 后等待进程真正退出（graceful shutdown 最长 20s），超时 -9 兜底
 for s in gateway voice ai trade goods user; do
-  pidfile="/opt/smartore/run/$s.pid"
+  pidfile="/opt/mindcart/run/$s.pid"
   if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     pid=$(cat "$pidfile")
     kill "$pid" 2>/dev/null || true

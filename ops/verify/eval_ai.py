@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Smartore AI 评测 v1 —— 确定性断言判分（不依赖 LLM judge）。
+MindCart AI 评测 v1 —— 确定性断言判分（不依赖 LLM judge）。
 
 设计口径（ADR-010）：
 - 指标只报「代码可判」的硬断言，每个指标印分母；n<50 不报置信区间（解释力不足，如实注明）

@@ -13,10 +13,10 @@
 
 | 服务 | 域 | 库 |
 |---|---|---|
-| smartore-user | 账号、地址、钱包（余额+流水）、文件 | smartore_user |
-| smartore-goods | 商品、分类、品牌、参数、详情、收藏、评价、售后规则、**库存权威表** | smartore_goods |
-| smartore-trade | 购物车、订单、支付编排、幂等、事件账本 | smartore_trade |
-| smartore-ai | 模型配置、提示词、知识库 RAG、导购 Agent、问答、分析报告、事件镜像 | smartore_ai |
+| mindcart-user | 账号、地址、钱包（余额+流水）、文件 | mindcart_user |
+| mindcart-goods | 商品、分类、品牌、参数、详情、收藏、评价、售后规则、**库存权威表** | mindcart_goods |
+| mindcart-trade | 购物车、订单、支付编排、幂等、事件账本 | mindcart_trade |
+| mindcart-ai | 模型配置、提示词、知识库 RAG、导购 Agent、问答、分析报告、事件镜像 | mindcart_ai |
 
 **契约模块**（`*-api`）：Feign 接口 + VO + 枚举。消费方只依赖 api，绝不依赖 app 实现
 （Smartlect 同款范式）。ai 是叶子服务（无人消费）→ 不建 api 模块，避免空转。

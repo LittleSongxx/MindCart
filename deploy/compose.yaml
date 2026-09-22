@@ -1,4 +1,4 @@
-# Smartore 本地开发/演示中间件栈（compose 项目名固定为 mall，容器 mall-*）
+# MindCart 本地开发/演示中间件栈（compose 项目名固定为 mall，容器 mall-*）
 # 镜像版本与集群（原 Smartlect 栈）保持一致，全部复用本地已拉取镜像，零新增下载。
 # Java 服务本地用 scripts/dev.sh up 以 jar 方式运行（集群部署另有 systemd/流水线）。
 name: mall
@@ -9,9 +9,9 @@ services:
     container_name: mall-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${SMARTORE_MYSQL_ROOT_PASSWORD:?set in run/runtime.env}
+      MYSQL_ROOT_PASSWORD: ${MINDCART_MYSQL_ROOT_PASSWORD:?set in run/runtime.env}
       # 传给 mysql-init 建号用（01-init-databases.sh 在容器内展开该变量）
-      SMARTORE_MYSQL_PASSWORD: ${SMARTORE_MYSQL_PASSWORD:?set in run/runtime.env}
+      MINDCART_MYSQL_PASSWORD: ${MINDCART_MYSQL_PASSWORD:?set in run/runtime.env}
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:33306:3306"
@@ -20,7 +20,7 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${SMARTORE_MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MINDCART_MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -33,15 +33,15 @@ services:
     image: redis:7.4.7-alpine
     container_name: mall-redis
     restart: unless-stopped
-    # notify-keyspace-events Ex：smartore-voice 的会话过期回流（SessionExpireListener）依赖过期事件；
+    # notify-keyspace-events Ex：mindcart-voice 的会话过期回流（SessionExpireListener）依赖过期事件；
     # 对既有服务无影响（该开关只是多发布事件，不改变读写行为）
-    command: redis-server --requirepass ${SMARTORE_REDIS_PASSWORD:?set in run/runtime.env} --notify-keyspace-events Ex
+    command: redis-server --requirepass ${MINDCART_REDIS_PASSWORD:?set in run/runtime.env} --notify-keyspace-events Ex
     ports:
       - "127.0.0.1:26379:6379"
     volumes:
       - mall-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${SMARTORE_REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${MINDCART_REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -55,10 +55,10 @@ services:
     container_name: mall-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: smartore
-      RABBITMQ_DEFAULT_PASS: ${SMARTORE_RABBIT_PASSWORD:?set in run/runtime.env}
+      RABBITMQ_DEFAULT_USER: mindcart
+      RABBITMQ_DEFAULT_PASS: ${MINDCART_RABBIT_PASSWORD:?set in run/runtime.env}
     ports:
-      - "127.0.0.1:5774:5672"     # AMQP（宿主机 5774 → 容器 5672，服务连 SMARTORE_RABBIT_PORT=5774）
+      - "127.0.0.1:5774:5672"     # AMQP（宿主机 5774 → 容器 5672，服务连 MINDCART_RABBIT_PORT=5774）
       - "127.0.0.1:15774:15672"   # 管理界面
     volumes:
       - mall-rabbit-data:/var/lib/rabbitmq
@@ -97,23 +97,23 @@ services:
         limits:
           memory: 512M
 
-  # smartore-voice 专用：pgvector 向量库（商品同步目录向量 + 语音会话状态）
+  # mindcart-voice 专用：pgvector 向量库（商品同步目录向量 + 语音会话状态）
   # 与 MySQL 四库并列的中间件，其他服务不依赖它；容器停止不影响既有服务
   mall-postgres:
     image: pgvector/pgvector:0.8.0-pg16
     container_name: mall-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: ${SMARTORE_POSTGRES_PASSWORD:?set in run/runtime.env}
-      POSTGRES_DB: smartore_voice
-      POSTGRES_USER: smartore
+      POSTGRES_PASSWORD: ${MINDCART_POSTGRES_PASSWORD:?set in run/runtime.env}
+      POSTGRES_DB: mindcart_voice
+      POSTGRES_USER: mindcart
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:35432:5432"
     volumes:
       - mall-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smartore -d smartore_voice"]
+      test: ["CMD-SHELL", "pg_isready -U mindcart -d mindcart_voice"]
       interval: 5s
       timeout: 3s
       retries: 20

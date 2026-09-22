@@ -2,8 +2,8 @@
 # 顺序拉起六服务（网关最后起，等业务服务注册）；pid 文件由脚本维护
 set -euo pipefail
 BASE=$(cd "$(dirname "$0")/../.." && pwd)/backend
-RUN=/opt/smartore/run
-mkdir -p "$RUN" /opt/smartore/logs
+RUN=/opt/mindcart/run
+mkdir -p "$RUN" /opt/mindcart/logs
 start() {
   local name=$1 jar=$2
   if [ -f "$RUN/$name.pid" ] && kill -0 "$(cat "$RUN/$name.pid")" 2>/dev/null; then
@@ -19,14 +19,14 @@ start() {
     if [ -f "$p" ]; then jar_path=$p; break; fi
   done
   [ -n "${jar_path:-}" ] || { echo "$name jar 缺失"; exit 1; }
-  nohup java ${SMARTORE_JVM_OPTS:--Xms256m -Xmx512m} -jar "$jar_path" > "/opt/smartore/logs/$name.log" 2>&1 &
+  nohup java ${MINDCART_JVM_OPTS:--Xms256m -Xmx512m} -jar "$jar_path" > "/opt/mindcart/logs/$name.log" 2>&1 &
   echo $! > "$RUN/$name.pid"
   echo "$name pid=$(cat "$RUN/$name.pid")"
 }
-start user  smartore-user/app
-start goods smartore-goods/app
-start trade smartore-trade/app
-start ai    smartore-ai
-start voice smartore-voice
+start user  mindcart-user/app
+start goods mindcart-goods/app
+start trade mindcart-trade/app
+start ai    mindcart-ai
+start voice mindcart-voice
 sleep 20
-start gateway smartore-gateway
+start gateway mindcart-gateway

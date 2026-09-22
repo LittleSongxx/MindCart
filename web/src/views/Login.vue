@@ -6,9 +6,9 @@
     <main class="auth-shell">
       <section class="shop-showcase">
         <div class="brand-row">
-          <img class="brand-logo" src="@/assets/imgs/logo.png" alt="Smartore">
+          <img class="brand-logo" src="@/assets/imgs/logo.png" alt="MindCart">
           <div>
-            <div class="brand-name">Smartore</div>
+            <div class="brand-name">MindCart</div>
             <div class="brand-subtitle">AI 智能商城导购</div>
           </div>
         </div>
@@ -24,7 +24,7 @@
             <span>预算 800 元，想买一款通勤降噪耳机</span>
           </div>
           <div class="chat-row ai-chat">
-            <img src="@/assets/imgs/logo.png" alt="Smartore">
+            <img src="@/assets/imgs/logo.png" alt="MindCart">
             <div>
               <strong>为你精选 3 款高匹配商品</strong>
               <span>已综合降噪效果、续航和 2,680 条评价</span>
@@ -60,8 +60,8 @@
 
       <section class="login-card">
         <div class="mobile-brand">
-          <img src="@/assets/imgs/logo.png" alt="Smartore">
-          <strong>Smartore</strong>
+          <img src="@/assets/imgs/logo.png" alt="MindCart">
+          <strong>MindCart</strong>
         </div>
 
         <div class="login-badge">WELCOME BACK</div>
@@ -91,6 +91,7 @@
           <span>还没有商城账号？</span>
           <a href="/register">立即注册</a>
         </div>
+        <p class="demo-hint">作品集演示买家账号 <b>aaa</b> / <b>123</b>，余额为模拟金额。</p>
         <p class="security-tip"><span>●</span> 账号信息已加密保护，请放心登录</p>
       </section>
     </main>
@@ -583,8 +584,21 @@ const login = () => {
   color: #156fba;
 }
 
+.demo-hint {
+  margin: 18px 0 0;
+  color: #5d6b7a;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.demo-hint b {
+  color: #168fa0;
+  font-weight: 700;
+}
+
 .security-tip {
-  margin: 24px 0 0;
+  margin: 10px 0 0;
   color: #a1aab6;
   font-size: 10px;
   text-align: center;

@@ -15,7 +15,7 @@
 
 ## 怎么做
 
-1. 写接口一律收请求 DTO（`com.smartore.<svc>.dto`），DTO 只声明"允许传什么"，
+1. 写接口一律收请求 DTO（`com.mindcart.<svc>.dto`），DTO 只声明"允许传什么"，
    `toEntity()` 转实体后调原 service（**service 签名不动**，改动面收敛在 controller）。
    字段名与前端 JSON 完全一致，前端零改动。
 2. DTO 不含服务端字段：`createTime`/`updateTime`、join 派生的 `categoryName`，

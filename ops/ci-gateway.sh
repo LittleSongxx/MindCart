@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Smartore 部署网关：SSH 强制命令调用，仅接受四个动词。
+# MindCart 部署网关：SSH 强制命令调用，仅接受四个动词。
 # authorized_keys 形如：
-#   command="/opt/smartore/ops/ci-gateway.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty <公钥>
+#   command="/opt/mindcart/ops/ci-gateway.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty <公钥>
 set -euo pipefail
-APP_DIR=/opt/smartore
+APP_DIR=/opt/mindcart
 RELEASES=$APP_DIR/releases
 BUNDLES=$APP_DIR/bundles
 CURRENT=$APP_DIR/current
@@ -44,7 +44,7 @@ case "$verb" in
     echo "rollback: ok"
     ;;
   status)
-    systemctl is-active smartore-apps || true
+    systemctl is-active mindcart-apps || true
     curl -s -o /dev/null -w "gateway health: %{http_code}\n" "$HEALTH_URL" || true
     # 语音服务独立于网关链路（叶子服务），网关健康不代表 voice 健康，单独探
     curl -s -o /dev/null -w "voice health: %{http_code}\n" http://127.0.0.1:9105/actuator/health || true

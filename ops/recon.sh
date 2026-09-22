@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smartore 四方对账（逐单核对，比总和口径更精确：历史"支付后取消"的订单不破坏基线）
+# MindCart 四方对账（逐单核对，比总和口径更精确：历史"支付后取消"的订单不破坏基线）
 #
 # 不变量（全部应为 0）：
 #  1 曾支付订单(含已取消) 必有钱包 PAY 流水且金额一致
@@ -16,16 +16,16 @@
 # 用法：ops/recon.sh（环境变量见下方默认值；可设 ALERTMANAGER_URL 触发告警）
 set -euo pipefail
 
-MYSQL_HOST=${SMARTORE_MYSQL_HOST:-127.0.0.1}
-MYSQL_PORT=${SMARTORE_MYSQL_PORT:-3306}
-MYSQL_USER=${SMARTORE_MYSQL_USER:-root}
-MYSQL_PASS=${SMARTORE_MYSQL_PASSWORD:?set SMARTORE_MYSQL_PASSWORD}
-PG_HOST=${SMARTORE_POSTGRES_HOST:-127.0.0.1}
-PG_PORT=${SMARTORE_POSTGRES_PORT:-5432}
-PG_USER=${SMARTORE_POSTGRES_USER:-smartore}
-PG_DB=${SMARTORE_POSTGRES_DB:-smartore_voice}
-PG_PASS=${SMARTORE_POSTGRES_PASSWORD:-}
-ALERTMANAGER_URL=${SMARTORE_ALERTMANAGER_URL:-}
+MYSQL_HOST=${MINDCART_MYSQL_HOST:-127.0.0.1}
+MYSQL_PORT=${MINDCART_MYSQL_PORT:-3306}
+MYSQL_USER=${MINDCART_MYSQL_USER:-root}
+MYSQL_PASS=${MINDCART_MYSQL_PASSWORD:?set MINDCART_MYSQL_PASSWORD}
+PG_HOST=${MINDCART_POSTGRES_HOST:-127.0.0.1}
+PG_PORT=${MINDCART_POSTGRES_PORT:-5432}
+PG_USER=${MINDCART_POSTGRES_USER:-mindcart}
+PG_DB=${MINDCART_POSTGRES_DB:-mindcart_voice}
+PG_PASS=${MINDCART_POSTGRES_PASSWORD:-}
+ALERTMANAGER_URL=${MINDCART_ALERTMANAGER_URL:-}
 
 # 密码经 MYSQL_PWD 环境变量传递（-p 命令行会进 ps）；连接错误必须可见，
 # 否则"连接失败"与"对账不平"都是静默 exit 1，cron/CI 无法区分。
@@ -39,55 +39,55 @@ else
     docker exec -e MYSQL_PWD="$MYSQL_PASS" mall-mysql mysql -u"$MYSQL_USER" -N -B -e "$1"
   }
 fi
-query "SELECT 1" >/dev/null 2>&1 || { echo "verdict=MYSQL_UNREACHABLE（检查 SMARTORE_MYSQL_* 变量与 mall-mysql 容器）"; exit 2; }
+query "SELECT 1" >/dev/null 2>&1 || { echo "verdict=MYSQL_UNREACHABLE（检查 MINDCART_MYSQL_* 变量与 mall-mysql 容器）"; exit 2; }
 
 # 一个 MySQL 实例承载全部 schema，可跨 schema JOIN
 EVER_PAID="status IN ('PAID','SHIPPED','COMPLETED','CANCELLING','CANCELLED')"
 
 c1=$(query "
-  SELECT COUNT(*) FROM smartore_trade.shop_order o
-  LEFT JOIN smartore_user.wallet_record w
+  SELECT COUNT(*) FROM mindcart_trade.shop_order o
+  LEFT JOIN mindcart_user.wallet_record w
     ON w.business_no = o.order_no AND w.type='PAY' AND ROUND(-w.amount*100) = ROUND(o.total_amount*100)
   WHERE o.$EVER_PAID AND w.id IS NULL")
 
 c2=$(query "
-  SELECT COUNT(*) FROM smartore_trade.shop_order o
-  LEFT JOIN smartore_user.wallet_record w
+  SELECT COUNT(*) FROM mindcart_trade.shop_order o
+  LEFT JOIN mindcart_user.wallet_record w
     ON w.business_no = o.order_no AND w.type='REFUND' AND ROUND(w.amount*100) = ROUND(o.total_amount*100)
   WHERE o.status IN ('CANCELLED') AND w.id IS NULL")
 
 c3=$(query "
-  SELECT COUNT(*) FROM smartore_trade.shop_order o
-  LEFT JOIN smartore_trade.trade_event_ledger l
+  SELECT COUNT(*) FROM mindcart_trade.shop_order o
+  LEFT JOIN mindcart_trade.trade_event_ledger l
     ON l.event_id = CONCAT('ORDER_PAID:', o.order_no) AND l.publish_status='PUBLISHED'
   WHERE o.$EVER_PAID AND l.id IS NULL")
 
 c4=$(query "
-  SELECT COUNT(*) FROM smartore_trade.shop_order o
-  LEFT JOIN smartore_trade.trade_event_ledger l
+  SELECT COUNT(*) FROM mindcart_trade.shop_order o
+  LEFT JOIN mindcart_trade.trade_event_ledger l
     ON l.event_id = CONCAT('ORDER_CANCELLED:', o.order_no) AND l.publish_status='PUBLISHED'
   WHERE o.status='CANCELLED' AND l.id IS NULL")
 
 c5=$(query "
-  SELECT COUNT(*) FROM smartore_trade.trade_event_ledger l
-  LEFT JOIN smartore_trade.shop_order o ON o.order_no = l.order_no
+  SELECT COUNT(*) FROM mindcart_trade.trade_event_ledger l
+  LEFT JOIN mindcart_trade.shop_order o ON o.order_no = l.order_no
   WHERE l.publish_status='PUBLISHED' AND o.id IS NULL")
 
 c6=$(query "
-  SELECT (SELECT COUNT(*) FROM smartore_trade.trade_event_ledger l WHERE l.publish_status='PUBLISHED'
-          AND NOT EXISTS (SELECT 1 FROM smartore_ai.trade_event_mirror m WHERE m.event_id = l.event_id))
-       + (SELECT COUNT(*) FROM smartore_ai.trade_event_mirror m
-          WHERE NOT EXISTS (SELECT 1 FROM smartore_trade.trade_event_ledger l
+  SELECT (SELECT COUNT(*) FROM mindcart_trade.trade_event_ledger l WHERE l.publish_status='PUBLISHED'
+          AND NOT EXISTS (SELECT 1 FROM mindcart_ai.trade_event_mirror m WHERE m.event_id = l.event_id))
+       + (SELECT COUNT(*) FROM mindcart_ai.trade_event_mirror m
+          WHERE NOT EXISTS (SELECT 1 FROM mindcart_trade.trade_event_ledger l
                             WHERE l.event_id = m.event_id AND l.publish_status='PUBLISHED'))")
 
 c7=$(query "
-  SELECT COUNT(*) FROM smartore_trade.shop_order o
+  SELECT COUNT(*) FROM mindcart_trade.shop_order o
   WHERE o.status = 'PAY_FAILED' AND EXISTS (
-    SELECT 1 FROM smartore_user.wallet_record w
+    SELECT 1 FROM mindcart_user.wallet_record w
     WHERE w.business_no = o.order_no AND w.type = 'PAY')")
 
 c8=$(query "
-  SELECT COUNT(*) FROM smartore_trade.trade_event_ledger WHERE publish_status = 'FAILED'")
+  SELECT COUNT(*) FROM mindcart_trade.trade_event_ledger WHERE publish_status = 'FAILED'")
 
 echo "paid_without_wallet_pay=$c1"
 echo "cancelled_without_refund=$c2"
@@ -98,7 +98,7 @@ echo "ledger_mirror_diff=$c6"
 echo "pay_failed_with_pay_flow=$c7"
 echo "ledger_failed_events=$c8"
 
-# ---- 不变量 9：voice 归因镜像（PostgreSQL smartore_voice.voice_order_event）----
+# ---- 不变量 9：voice 归因镜像（PostgreSQL mindcart_voice.voice_order_event）----
 # psql 不可用时回退到 mall-postgres 容器内执行（与上面 mysql 回退同理）
 if command -v psql >/dev/null 2>&1; then
   pg_query() {
@@ -119,7 +119,7 @@ if pg_query "SELECT 1" >/dev/null 2>&1; then
     { missing=0
       while IFS= read -r no; do
         [ -z "$no" ] && continue
-        found=$(query "SELECT COUNT(*) FROM smartore_trade.shop_order WHERE order_no='$no'")
+        found=$(query "SELECT COUNT(*) FROM mindcart_trade.shop_order WHERE order_no='$no'")
         [ "$found" = "0" ] && missing=$((missing+1))
       done
       echo "$missing"; })
@@ -141,7 +141,7 @@ else
   echo "verdict=MISMATCH (violations=$total)"
   if [ -n "$ALERTMANAGER_URL" ]; then
     curl -s -X POST "$ALERTMANAGER_URL/api/v2/alerts" -H 'Content-Type: application/json' -d "[{
-      \"labels\": {\"alertname\": \"SmartoreReconMismatch\", \"severity\": \"critical\"},
+      \"labels\": {\"alertname\": \"MindCartReconMismatch\", \"severity\": \"critical\"},
       \"annotations\": {\"summary\": \"四方对账不平: paid_no_pay=$c1 cancel_no_refund=$c2 paid_no_event=$c3 cancel_no_event=$c4 orphan=$c5 mirror_diff=$c6 pay_failed_with_pay=$c7 ledger_failed=$c8 voice_orphan=$c9a voice_stale=$c9b\"}
     }]" > /dev/null && echo "ALERT-SENT"
   fi

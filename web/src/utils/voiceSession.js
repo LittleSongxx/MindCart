@@ -1,5 +1,5 @@
 /**
- * 语音会话 composable：对接 smartore-voice 的 /voice/ws 双向流。
+ * 语音会话 composable：对接 mindcart-voice 的 /voice/ws 双向流。
  * 移植自 voice-test.html 的 7 个逻辑单元：
  * ① WS 生命周期（query-token 握手，浏览器 WS 无法自定义请求头）
  * ② AudioWorklet 内联降采样采集（任意采样率 → 16k Int16 分片）

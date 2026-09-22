@@ -1,0 +1,2 @@
+com.mindcart.common.cache.CacheAutoConfiguration
+com.mindcart.common.doc.OpenApiAutoConfiguration

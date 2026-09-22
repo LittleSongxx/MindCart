@@ -1,0 +1,43 @@
+{
+  "title": "MindCart 总览",
+  "uid": "mindcart-overview",
+  "timezone": "browser",
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "stat", "title": "服务在线",
+      "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+      "targets": [{"expr": "count(up{job=~\"mindcart-.*\"} == 1)"}]
+    },
+    {
+      "type": "stat", "title": "网关 QPS",
+      "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count{job=\"mindcart-gateway\"}[1m]))"}]
+    },
+    {
+      "type": "timeseries", "title": "各服务 QPS",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"mindcart-.*\"}[1m]))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "type": "timeseries", "title": "各服务 P95 延迟",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_server_requests_seconds_bucket{job=~\"mindcart-.*\"}[5m])))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "type": "timeseries", "title": "堆内存使用",
+      "gridPos": {"x": 0, "y": 4, "w": 8, "h": 4},
+      "targets": [{"expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"mindcart-.*\"})", "legendFormat": "{{job}}"}]
+    },
+    {
+      "type": "timeseries", "title": "5xx 错误速率",
+      "gridPos": {"x": 8, "y": 4, "w": 8, "h": 4},
+      "targets": [{"expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"mindcart-.*\", status=~\"5..\"}[5m]))", "legendFormat": "{{job}}"}]
+    },
+    {
+      "type": "timeseries", "title": "网关限流拒绝（429）",
+      "gridPos": {"x": 16, "y": 4, "w": 8, "h": 4},
+      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count{job=\"mindcart-gateway\", status=\"429\"}[5m]))", "legendFormat": "429"}]
+    }
+  ]
+}

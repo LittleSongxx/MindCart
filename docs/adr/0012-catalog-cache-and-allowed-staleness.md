@@ -11,7 +11,7 @@ user / goods / trade 三个核心服务此前完全没有 Redis：首页 `/produ
 
 ## 怎么做
 
-分区 TTL（`smartore.cache.ttls`）：`product` 60s，`detail` / `param` / `category` / `brand` 30min，
+分区 TTL（`mindcart.cache.ttls`）：`product` 60s，`detail` / `param` / `category` / `brand` 30min，
 全部叠加 ±20% 抖动（`JitterTtlRedisCacheManager`，摊开失效时刻防雪崩）。
 三条明确的取舍：
 
@@ -50,5 +50,5 @@ user / goods / trade 三个核心服务此前完全没有 Redis：首页 `/produ
 
 - 列表页库存最多陈旧 60s（已在上面论证其安全性）。
 - 审计表与缓存均按服务分库/分区，查询审计需分别访问 `/operLog` 与 `/aiOperLog`。
-- 缓存是可选加速层（`smartore.cache.enabled` 默认 false）：`StockSagaService` 用
+- 缓存是可选加速层（`mindcart.cache.enabled` 默认 false）：`StockSagaService` 用
   `ObjectProvider<CacheManager>` 可选获取，关掉缓存服务照常启动。

@@ -1,4 +1,4 @@
-# Smartore 监控栈（与 deploy/compose.yaml 同网络边界，host.docker.internal 抓宿主机服务指标）
+# MindCart 监控栈（与 deploy/compose.yaml 同网络边界，host.docker.internal 抓宿主机服务指标）
 name: mall
 
 services:
@@ -31,8 +31,8 @@ services:
     container_name: mall-grafana
     restart: unless-stopped
     environment:
-      GF_SECURITY_ADMIN_USER: ${SMARTORE_GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${SMARTORE_GRAFANA_PASSWORD:-smartore}
+      GF_SECURITY_ADMIN_USER: ${MINDCART_GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${MINDCART_GRAFANA_PASSWORD:-mindcart}
     ports:
       - "127.0.0.1:3999:3000"
     volumes:

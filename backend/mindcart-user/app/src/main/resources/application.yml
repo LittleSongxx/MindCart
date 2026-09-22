@@ -1,0 +1,87 @@
+server:
+  port: ${MINDCART_USER_PORT:9101}
+  shutdown: graceful
+
+spring:
+  application:
+    name: mindcart-user
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${MINDCART_NACOS_ADDR:127.0.0.1:28848}
+        username: ${MINDCART_NACOS_USERNAME:nacos}
+        password: ${MINDCART_NACOS_PASSWORD:nacos}
+        group: ${MINDCART_NACOS_GROUP:MINDCART_GROUP}
+        prefer-ip-address: true
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000   # 显式超时：readTimeout 必须 << STALE_SECONDS(60)，否则探测判失败与迟到提交撞车
+            read-timeout: 10000
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MINDCART_MYSQL_HOST:127.0.0.1}:${MINDCART_MYSQL_PORT:33306}/mindcart_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MINDCART_MYSQL_USER:root}
+    password: ${MINDCART_MYSQL_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath*:com/mindcart/**/mapper/*.xml
+
+pagehelper:
+  helper-dialect: mysql
+
+springdoc:
+  # 服务端只暴露 OpenAPI spec，UI 统一在网关聚合（见 mindcart-gateway 的 springdoc.swagger-ui.urls）。
+  # 路径前缀带服务名，网关按前缀路由，无需 StripPrefix。
+  api-docs:
+    path: /doc/user/v3/api-docs
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        # 不开 histogram，Micrometer 不发 *_seconds_bucket 序列，P95 告警/看板永远无数据
+        http.server.requests: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+mindcart:
+  internal-token: ${MINDCART_INTERNAL_TOKEN:}
+  gateway-token: ${MINDCART_GATEWAY_TOKEN:}
+  jwt:
+    secret: ${MINDCART_JWT_SECRET:}
+    ttl-hours: ${MINDCART_JWT_TTL_HOURS:72}
+  file:
+    dir: ${MINDCART_FILE_DIR:./files}
+    base-url: ${MINDCART_FILE_BASE_URL:http://localhost:9080}
+
+logging:
+  level:
+    root: info
+  file:
+    name: logs/mindcart-user.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 7
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
