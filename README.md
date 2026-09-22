@@ -176,43 +176,6 @@ ops/                   Nginx、监控、对账、systemd
 docs/adr/              架构决策
 ```
 
-## 运维与排查入口
-
-服务起来之后，这些是排查时的第一站：
-
-| 入口 | 在哪 | 用途 |
-|---|---|---|
-| 接口文档 | `http://localhost:9080/doc.html` | 五个服务的接口一页汇总（容器栈经 `/api` 反代不可达，直连网关） |
-| 操作审计 | `GET /operLog/selectPage`、`GET /aiOperLog/selectPage` | 谁改了价格/库存/模型配置，含失败尝试 |
-| Outbox 水位 | `GET /shopOrder/outboxStats` | PENDING / PUBLISHED / FAILED 计数 |
-| Outbox 复位重投 | `POST /shopOrder/replayOutbox` | Rabbit 故障恢复后把 FAILED 事件重新投递（管理员） |
-| 覆盖率报告 | `backend/*/target/site/jacoco/index.html` | `mvn test` 后生成 |
-
-> 容器栈下重建某个服务后，若经 `http://localhost:8081/api/...` 返回 502 而直连 9080 正常，
-> 是 nginx 缓存了容器的旧 IP：`docker restart smartore-web` 即可。
-
-## 怎么验证它真的能跑
-
-不只看截图，下面这些都能在本地重跑。前两条不需要起服务，后两条需要。
-
-```bash
-cd backend && mvn test          # 100+ 用例：单元 + Testcontainers 真 MySQL（+ 真 Redis）集成
-                                # 跑完看 backend/smartore-trade/app/target/site/jacoco/index.html
-
-# 以下需要先 ./scripts/dev.sh up（或容器栈），网关在 9080
-python3 ops/verify/trade_e2e.py     # 交易链路：下单→幂等重放→库存扣减→取消退款→回补
-python3 ops/verify/oversell_test.py # 并发下单不超卖（需要一个库存很小的商品）
-python3 ops/verify/eval_ai.py       # AI 评测：导购 Pass@1、问答拒答、检索 Recall@3（需模型 Key）
-
-# 浏览器全链路（含 SSE 流式问答）；BASE 指向前端入口，jar 方式 5173 / 容器方式 8081
-BASE=http://localhost:8081 node ops/verify/browser_e2e.mjs
-BASE=http://localhost:8081 node ops/verify/voice_e2e.mjs           # 语音导购对话
-BASE=http://localhost:8081 node ops/verify/voice_manager_e2e.mjs   # 管理端语音会话与归因
-```
-
-浏览器脚本依赖 playwright 的 chromium，首次运行需要 `npx playwright install chromium`；
-已装在非默认位置时用 `CHROME_PATH` 指定。
-
 ## 快速开始
 
 依赖本机 Docker、JDK 21、Maven、Node.js 22。
@@ -241,6 +204,7 @@ docker compose -f deploy/compose.apps.yaml up -d --build
 ```
 
 容器方式的浏览器入口是 `http://localhost:8081`。两种方式不要同时开，端口会撞。
+重建过某个服务后若 `/api` 返回 502，见文末"运维与排查入口"里的 nginx 上游缓存说明。
 
 模型 Key 写在 `run/runtime.env` 的 `SMARTORE_CHAT_API_KEY` / `SMARTORE_EMBED_API_KEY`。启动时加密进库，管理界面只看到掩码。
 
@@ -250,6 +214,44 @@ docker compose -f deploy/compose.apps.yaml up -d --build
 |---|---|---|
 | 管理员 | `admin` | `admin` |
 | 买家 | `aaa` | `123` |
+
+## 怎么验证它真的能跑
+
+不只看截图，下面这些都能在本地重跑。`mvn test` 不需要起服务，其余都需要服务栈在跑。
+
+```bash
+cd backend && mvn test          # 100+ 用例：单元 + Testcontainers 真 MySQL（+ 真 Redis）集成
+                                # 跑完看 backend/smartore-trade/app/target/site/jacoco/index.html
+
+# 需要先 ./scripts/dev.sh up（或容器栈），网关在 9080
+python3 ops/verify/trade_e2e.py     # 交易链路：下单→幂等重放→库存扣减→取消退款→回补
+python3 ops/verify/oversell_test.py # 并发下单不超卖（需要一个库存很小的商品）
+python3 ops/verify/eval_ai.py       # AI 评测：导购 Pass@1、问答拒答、检索 Recall@3（需模型 Key）
+
+# 浏览器全链路（含 SSE 流式问答）；BASE 指向前端入口，jar 方式 5173 / 容器方式 8081
+npm ci --prefix ops/verify            # 浏览器脚本的 playwright-core 依赖（首次运行）
+BASE=http://localhost:8081 node ops/verify/browser_e2e.mjs
+BASE=http://localhost:8081 node ops/verify/voice_e2e.mjs           # 语音导购对话
+BASE=http://localhost:8081 node ops/verify/voice_manager_e2e.mjs   # 管理端语音会话与归因
+```
+
+浏览器脚本依赖 playwright 的 chromium，首次运行需要 `npx playwright install chromium`；
+已装在非默认位置时用 `CHROME_PATH` 指定。
+
+## 运维与排查入口
+
+服务起来之后，这些是排查时的第一站：
+
+| 入口 | 在哪 | 用途 |
+|---|---|---|
+| 接口文档 | `http://localhost:9080/doc.html` | 五个服务的接口一页汇总（容器栈经 `/api` 反代不可达，直连网关） |
+| 操作审计 | `GET /operLog/selectPage`、`GET /aiOperLog/selectPage` | 谁改了价格/库存/模型配置，含失败尝试 |
+| Outbox 水位 | `GET /shopOrder/outboxStats` | PENDING / PUBLISHED / FAILED 计数 |
+| Outbox 复位重投 | `POST /shopOrder/replayOutbox` | Rabbit 故障恢复后把 FAILED 事件重新投递（管理员） |
+| 覆盖率报告 | `backend/*/target/site/jacoco/index.html` | `mvn test` 后生成 |
+
+> 容器栈下重建某个服务后，若经 `http://localhost:8081/api/...` 返回 502 而直连 9080 正常，
+> 是 nginx 缓存了容器的旧 IP：`docker restart smartore-web` 即可。
 
 ## 这个仓库里没有的东西
 
