@@ -82,6 +82,13 @@
       <artifactId>micrometer-core</artifactId>
       <optional>true</optional>
     </dependency>
+    <!-- 接口文档的公共 OpenAPI 元信息：只用到 swagger-models 里的 OpenAPI/Info，
+         由 springdoc 的 starter-common 传递进来（版本走 springdoc BOM） -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-common</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- 仅测试用：common 只依赖校验 API（运行期的 provider 由各服务的 starter-validation 提供），
          单测要跑真实的 ConstraintViolation 就得引入实现 -->
     <dependency>

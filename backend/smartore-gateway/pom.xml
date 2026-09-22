@@ -16,6 +16,12 @@
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
     </dependency>
+    <!-- 网关侧只做文档聚合（WebFlux 版），UI 一页汇总下游各服务的 /v3/api-docs。
+         不再引 knife4j-gateway：它与 springdoc 的聚合逻辑互相冲突。 -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.alibaba.cloud</groupId>
       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>

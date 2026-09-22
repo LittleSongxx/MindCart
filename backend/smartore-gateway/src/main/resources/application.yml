@@ -49,12 +49,47 @@ spring:
             - id: voice
               uri: lb://smartore-voice
               predicates: [ "Path=/voice/**" ]
+            # 接口文档：各服务的 spec 暴露在 /doc/<svc>/v3/api-docs，网关按前缀转发。
+            # 路径本身带服务名，因此不需要 StripPrefix 重写。
+            - id: doc-user
+              uri: lb://smartore-user
+              predicates: [ "Path=/doc/user/**" ]
+            - id: doc-goods
+              uri: lb://smartore-goods
+              predicates: [ "Path=/doc/goods/**" ]
+            - id: doc-trade
+              uri: lb://smartore-trade
+              predicates: [ "Path=/doc/trade/**" ]
+            - id: doc-ai
+              uri: lb://smartore-ai
+              predicates: [ "Path=/doc/ai/**" ]
+            - id: doc-voice
+              uri: lb://smartore-voice
+              predicates: [ "Path=/doc/voice/**" ]
           default-filters:
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter.replenishRate: ${SMARTORE_RATE_REPLENISH:20}
                 redis-rate-limiter.burstCapacity: ${SMARTORE_RATE_BURST:60}
                 key-resolver: "#{@userKeyResolver}"
+
+# 网关聚合接口文档：一个 /doc.html 汇总五个服务的 spec（下拉切换）。
+# 各服务只暴露 spec，UI 只在这里渲染。
+springdoc:
+  swagger-ui:
+    path: /doc.html
+    disable-swagger-default-url: true
+    urls:
+      - name: 用户服务 smartore-user
+        url: /doc/user/v3/api-docs
+      - name: 商品服务 smartore-goods
+        url: /doc/goods/v3/api-docs
+      - name: 交易服务 smartore-trade
+        url: /doc/trade/v3/api-docs
+      - name: AI 服务 smartore-ai
+        url: /doc/ai/v3/api-docs
+      - name: 语音服务 smartore-voice
+        url: /doc/voice/v3/api-docs
 
 management:
   endpoints:
@@ -74,6 +109,13 @@ smartore:
       - "POST /user/login"
       - "POST /user/register"
       - "GET /files/download/**"
+      # 接口文档：只读的 OpenAPI spec 与静态 UI。
+      # 免登录是为了能在浏览器直接打开；限流仍在（走 default-filters），
+      # 若部署到公网且不想暴露接口清单，把这 4 条删掉即可，其余功能不受影响。
+      - "GET /doc.html"
+      - "GET /doc/**"
+      - "GET /webjars/**"
+      - "GET /v3/api-docs/**"
     # 管理规则：命中即要求 ADMIN（读写分离 —— 前台只读商品字典，写操作归管理端）
     admin-rules:
       - "POST /user/add"

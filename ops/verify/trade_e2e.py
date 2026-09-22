@@ -38,8 +38,20 @@ products = r["data"]
 p = products[0]
 print(f"     商品: {p['name']} 库存={p['stockQuantity']} 价格={p['price']}")
 
-# 加购
-# 买单件（余额 11602，避免余额不足干扰主流程验证）
+# 库存基线用「按 id 精确读」，不用列表里的值：
+# 列表缓存（键为筛选条件组合）按设计允许 TTL 内陈旧，拿它做扣减算术的基线会误判；
+# 按 id 的缓存条目（id=N）在库存变动时会被精确失效，读到的始终是当前值。
+baseline = call("GET", f"/product/selectAll?id={p['id']}", token)["data"][0]
+stock_before = baseline["stockQuantity"]
+
+# 先清空购物车：/shoppingCart/add 对已存在的行是"累加数量"而不是覆盖，
+# 反复跑这个脚本会攒出 2、3、4…件，导致下单数量与"只加了 1 件"的预期不符
+# （曾经就是这样误报成"库存没扣对"）。测试自给自足，不依赖环境残留。
+cart = call("GET", "/shoppingCart/selectAll", token).get("data") or []
+if cart:
+    call("DELETE", "/shoppingCart/delete/batch", token, [row["id"] for row in cart])
+
+# 加购：明确只加 1 件（余额足够，避免余额不足干扰主流程验证）
 r = call("POST", "/shoppingCart/add", token, {"productId": p["id"], "quantity": 1})
 must(r["code"] == "200", "加购")
 
@@ -54,9 +66,11 @@ print(f"     订单 {order['orderNo']} 金额 {total}")
 r2 = call("POST", "/shopOrder/create", token, {"requestId": rid, **RECEIVER})
 must(r2["code"] == "200" and r2["data"]["orderNo"] == order["orderNo"], "幂等重放返回原订单")
 
-# 库存已扣
+# 库存已扣：按订单实际件数核对（而不是写死 1 件），且前后都用按 id 的精确读
 r = call("GET", f"/product/selectAll?id={p['id']}", token)
-must(r["data"][0]["stockQuantity"] == p["stockQuantity"] - 1, "库存原子扣减")
+stock_after = r["data"][0]["stockQuantity"]
+must(stock_after == stock_before - order["totalQuantity"],
+     "库存原子扣减", f"期望 {stock_before - order['totalQuantity']}，实际 {stock_after}")
 
 # 钱包余额变动（充值前记录）
 balance_before = call("GET", f"/user/selectById/{uid}", token)["data"]["balance"]

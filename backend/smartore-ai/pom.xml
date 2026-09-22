@@ -95,6 +95,11 @@
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-model-openai</artifactId>
     </dependency>
+    <!-- 接口文档：服务端只暴露 spec（-api 而非 -ui），UI 由网关聚合出单页 -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

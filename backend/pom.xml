@@ -41,10 +41,23 @@
     <java-jwt.version>4.4.0</java-jwt.version>
     <!-- JaCoCo 不在 Boot BOM 里，需显式钉版本 -->
     <jacoco.version>0.8.13</jacoco.version>
+    <!-- 接口文档：springdoc。
+         不用 knife4j——它的 UI 路径固定为 /doc.html，5 个服务经同一网关暴露会互相撞车；
+         而 knife4j 的网关聚合模块又与 springdoc 冲突。springdoc 自身就支持在网关聚合出
+         一个带服务下拉的单页，少一个依赖、少一层冲突。 -->
+    <springdoc.version>2.8.16</springdoc.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <!-- springdoc：统一版本口径（服务端用 webmvc-ui，网关用 webflux-ui 做聚合） -->
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-bom</artifactId>
+        <version>${springdoc.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>

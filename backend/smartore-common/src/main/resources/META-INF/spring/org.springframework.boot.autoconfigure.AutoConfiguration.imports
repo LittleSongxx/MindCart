@@ -1,1 +1,2 @@
 com.smartore.common.cache.CacheAutoConfiguration
+com.smartore.common.doc.OpenApiAutoConfiguration
