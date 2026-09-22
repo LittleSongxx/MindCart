@@ -34,7 +34,10 @@ jobs:
         run: |
           printf '%-24s %10s %10s %8s\n' 模块 指令数 未覆盖 覆盖率
           for csv in $(find backend -path '*/target/site/jacoco/jacoco.csv' | sort); do
-            module=$(echo "$csv" | cut -d/ -f2)
+            # 标签取到子模块一级（backend/smartore-trade/app/target/... → smartore-trade/app）：
+            # 只取第二段会让 trade 的 api 与 app 两个模块打印成同一个名字，读者分不清哪行是哪个
+            module=${csv#backend/}
+            module=${module%%/target/*}
             awk -F, -v module="$module" '
               NR > 1 { miss += $4 + $6; cov += $5 + $7 }
               END {
