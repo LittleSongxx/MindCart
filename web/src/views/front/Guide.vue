@@ -3,7 +3,7 @@
     <section class="guide-hero">
       <div class="hero-copy">
         <div class="assistant-mark">
-          <img src="@/assets/imgs/logo.png" alt="AI 导购">
+          <img src="@/assets/imgs/logo.png" alt="Smartore">
           <span>AI SHOPPING GUIDE</span>
         </div>
         <h1>把需求交给我，帮你选得更合适</h1>
@@ -90,14 +90,14 @@
         </div>
 
         <div v-if="data.generating" class="thinking-state">
-          <img src="@/assets/imgs/logo.png" alt="AI 思考中">
+          <img src="@/assets/imgs/logo.png" alt="Smartore">
           <div class="thinking-lines"><i></i><i></i><i></i></div>
           <strong>正在理解需求并校验候选商品</strong>
           <p>正在执行需求理解、商品召回、用户画像、价格库存校验等步骤</p>
         </div>
 
         <div v-else-if="!data.currentTask" class="empty-state">
-          <img src="@/assets/imgs/logo.png" alt="AI 导购">
+          <img src="@/assets/imgs/logo.png" alt="Smartore">
           <h3>你的推荐清单将在这里生成</h3>
           <p>描述得越具体，推荐结果会越贴近你的真实需求。</p>
         </div>

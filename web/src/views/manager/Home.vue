@@ -4,7 +4,7 @@
       <div class="welcome-card">
         <div>
           <div class="welcome-title">您好，{{ data.user?.name }}</div>
-          <div class="welcome-desc">欢迎进入 AI 智能商城导购与运营增长系统</div>
+          <div class="welcome-desc">欢迎进入 Smartore 导购与运营后台</div>
         </div>
       </div>
       <div class="metric-grid">

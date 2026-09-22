@@ -2,8 +2,8 @@
   <div class="manager-container">
     <div class="manager-header">
       <div class="manager-header-left">
-        <img src="@/assets/imgs/logo.png" alt="">
-        <div class="title">AI 智能商城导购平台</div>
+        <img src="@/assets/imgs/logo.png" alt="Smartore">
+        <div class="title">Smartore</div>
       </div>
       <div class="manager-header-center">
         <el-breadcrumb separator="/">

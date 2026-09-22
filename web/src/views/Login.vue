@@ -6,10 +6,10 @@
     <main class="auth-shell">
       <section class="shop-showcase">
         <div class="brand-row">
-          <img class="brand-logo" src="@/assets/imgs/logo.png" alt="AI 智能导购">
+          <img class="brand-logo" src="@/assets/imgs/logo.png" alt="Smartore">
           <div>
-            <div class="brand-name">智能商城导购平台</div>
-            <div class="brand-subtitle">AI Shopping Assistant</div>
+            <div class="brand-name">Smartore</div>
+            <div class="brand-subtitle">AI 智能商城导购</div>
           </div>
         </div>
 
@@ -24,7 +24,7 @@
             <span>预算 800 元，想买一款通勤降噪耳机</span>
           </div>
           <div class="chat-row ai-chat">
-            <img src="@/assets/imgs/logo.png" alt="AI">
+            <img src="@/assets/imgs/logo.png" alt="Smartore">
             <div>
               <strong>为你精选 3 款高匹配商品</strong>
               <span>已综合降噪效果、续航和 2,680 条评价</span>
@@ -60,8 +60,8 @@
 
       <section class="login-card">
         <div class="mobile-brand">
-          <img src="@/assets/imgs/logo.png" alt="AI 智能导购">
-          <strong>智选商城</strong>
+          <img src="@/assets/imgs/logo.png" alt="Smartore">
+          <strong>Smartore</strong>
         </div>
 
         <div class="login-badge">WELCOME BACK</div>
