@@ -27,6 +27,11 @@ public class Result<T> implements Serializable {
         return build(codeEnum.getCode(), codeEnum.getMsg(), null);
     }
 
+    /** 用错误码语义 + 定制提示（与 CustomException 的同名重载口径一致） */
+    public static <T> Result<T> error(ResultCodeEnum codeEnum, String msg) {
+        return build(codeEnum.getCode(), msg, null);
+    }
+
     private static <T> Result<T> build(String code, String msg, T data) {
         Result<T> result = new Result<>();
         result.setCode(code);

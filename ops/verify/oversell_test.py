@@ -41,8 +41,10 @@ for t in users:
 
 results = [None, None]
 def buy(i):
+    # 收件人字段走 DTO 校验，占位值（"1"）会被 400 挡在下单之前，用合法手机号
     results[i] = call("POST", "/shopOrder/create", users[i],
-                      {"requestId": f"race-{i}-{int(time.time()*1000)}", "receiverName": "race", "receiverPhone": "1", "receiverAddress": "race"})
+                      {"requestId": f"race-{i}-{int(time.time()*1000)}", "receiverName": "并发压测",
+                       "receiverPhone": "18800009999", "receiverAddress": "并发压测地址"})
 
 threads = [threading.Thread(target=buy, args=(i,)) for i in range(2)]
 [t.start() for t in threads]

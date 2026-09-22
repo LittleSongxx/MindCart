@@ -1,10 +1,16 @@
 package com.smartore.ai.controller;
 
-import com.smartore.common.result.Result;
+import com.smartore.ai.dto.AiModelConfigSaveRequest;
 import com.smartore.ai.entity.AiModelConfig;
 import com.smartore.ai.service.AiModelConfigService;
+import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,14 +23,14 @@ public class AiModelConfigController {
     private AiModelConfigService aiModelConfigService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody AiModelConfig aiModelConfig) {
-        aiModelConfigService.add(aiModelConfig);
+    public Result add(@Validated(Create.class) @RequestBody AiModelConfigSaveRequest request) {
+        aiModelConfigService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result update(@RequestBody AiModelConfig aiModelConfig) {
-        aiModelConfigService.updateById(aiModelConfig);
+    public Result update(@Validated(Update.class) @RequestBody AiModelConfigSaveRequest request) {
+        aiModelConfigService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -42,8 +48,11 @@ public class AiModelConfigController {
 
     @GetMapping("/selectPage")
     public Result selectPage(AiModelConfig aiModelConfig,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                            @RequestParam(defaultValue = "1")
+                            @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                            @RequestParam(defaultValue = "10")
+                            @Min(value = 1, message = "每页条数最小为1")
+                            @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<AiModelConfig> pageInfo = aiModelConfigService.selectPage(aiModelConfig, pageNum, pageSize);
         return Result.success(pageInfo);
     }

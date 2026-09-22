@@ -50,6 +50,13 @@
       <artifactId>feign-core</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- GlobalExceptionHandler 接管 ConstraintViolationException。
+         只是校验 API（无传递依赖），Spring 启动时解析 @ExceptionHandler 方法签名就会加载该类型，
+         因此不能是 provided：类缺失会让整个 advice 注册失败。 -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+    </dependency>
     <dependency>
       <groupId>cn.hutool</groupId>
       <artifactId>hutool-all</artifactId>
@@ -57,6 +64,13 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
+    </dependency>
+    <!-- 仅测试用：common 只依赖校验 API（运行期的 provider 由各服务的 starter-validation 提供），
+         单测要跑真实的 ConstraintViolation 就得引入实现 -->
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

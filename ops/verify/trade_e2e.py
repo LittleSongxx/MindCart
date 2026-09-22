@@ -17,12 +17,20 @@ def must(cond, label, detail=""):
     print(("PASS " if cond else "FAIL ") + label + (f" | {detail}" if detail and not cond else ""))
     if not cond: sys.exit(1)
 
+# 收货信息：手机号用合法的中国大陆手机号。
+# 订单接口对收件人字段有格式校验（DTO + Bean Validation），早期用的 "188"/"x" 之类的
+# 占位值会被 400 挡在 Saga 之前——这类占位值本来也不是有效用例数据。
+RECEIVER = {"receiverName": "张三", "receiverPhone": "18800009999", "receiverAddress": "文三路 168 号"}
+
 # 登录
 r = call("POST", "/user/login", body={"username": "aaa", "password": "123"})
 token = r["data"]["token"]; uid = r["data"]["id"]
 must(bool(token), "登录 aaa")
-# 测试自给自足：先充值，避免历史消耗影响
-call("POST", "/wallet/recharge", token, {"amount": 50000, "remark": "e2e充值"})
+# 测试自给自足：先充值，避免历史消耗影响。
+# 注意单笔上限 10000（服务层既有限制），早期写 50000 会被拒且返回值没人看，
+# 充值是静默失败的——这里改成限额内并断言结果，否则脚本会悄悄依赖"恰好还有余额"。
+r = call("POST", "/wallet/recharge", token, {"amount": 10000, "remark": "e2e充值"})
+must(r.get("code") == "200", "充值 10000", json.dumps(r)[:200])
 
 # 商品列表取一个在售商品
 r = call("GET", "/product/selectAll?status=ON_SALE", token)
@@ -37,13 +45,13 @@ must(r["code"] == "200", "加购")
 
 # 下单（带 requestId）
 rid = f"e2e-{int(time.time())}"
-r = call("POST", "/shopOrder/create", token, {"requestId": rid, "receiverName": "张三", "receiverPhone": "188", "receiverAddress": "文三路"})
+r = call("POST", "/shopOrder/create", token, {"requestId": rid, **RECEIVER})
 must(r["code"] == "200" and r["data"]["status"] == "PAID", "下单 Saga 收敛为 PAID", json.dumps(r)[:200])
 order = r["data"]; total = order["totalAmount"]
 print(f"     订单 {order['orderNo']} 金额 {total}")
 
 # 幂等重放：同 requestId 再下单 → 返回原订单
-r2 = call("POST", "/shopOrder/create", token, {"requestId": rid, "receiverName": "张三", "receiverPhone": "188", "receiverAddress": "文三路"})
+r2 = call("POST", "/shopOrder/create", token, {"requestId": rid, **RECEIVER})
 must(r2["code"] == "200" and r2["data"]["orderNo"] == order["orderNo"], "幂等重放返回原订单")
 
 # 库存已扣
@@ -83,7 +91,7 @@ if small:
     lock = threading.Lock()
     def attempt(i):
         rid2 = f"e2e-os-{int(time.time())}-{i}"
-        rr = call("POST", "/shopOrder/create", token, {"requestId": rid2, "receiverName": "x", "receiverPhone": "1", "receiverAddress": "x", "productId": small["id"]})
+        rr = call("POST", "/shopOrder/create", token, {"requestId": rid2, **RECEIVER, "productId": small["id"]})
         # 先加购
         with lock:
             if rr["code"] == "200": ok[0] += 1
@@ -93,8 +101,8 @@ if small:
         call("POST", "/shoppingCart/add", token, {"productId": small["id"], "quantity": qty})
         # 下单会清空选中项，串行加购+下单无法并发——改为三线程同时下单（同购物车）
     # 简化：串行三单，第一单成功后购物车被清空 → 后两单报"没有选中商品"，不会超卖
-    r1 = call("POST", "/shopOrder/create", token, {"requestId": f"os-1-{int(time.time())}", "receiverName": "x", "receiverPhone": "1", "receiverAddress": "x"})
-    r2 = call("POST", "/shopOrder/create", token, {"requestId": f"os-2-{int(time.time())}", "receiverName": "x", "receiverPhone": "1", "receiverAddress": "x"})
+    r1 = call("POST", "/shopOrder/create", token, {"requestId": f"os-1-{int(time.time())}", **RECEIVER})
+    r2 = call("POST", "/shopOrder/create", token, {"requestId": f"os-2-{int(time.time())}", **RECEIVER})
     must(r1["code"] == "200", "断货前最后一件可买")
     must(r2["code"] != "200", "库存清零后拒绝下单")
     r = call("GET", f"/product/selectById/{small['id']}", token)

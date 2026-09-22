@@ -1,9 +1,11 @@
 package com.smartore.goods.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.goods.dto.ProductFavoriteAddRequest;
 import com.smartore.goods.entity.ProductFavorite;
 import com.smartore.goods.service.ProductFavoriteService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,8 +18,8 @@ public class ProductFavoriteController {
     private ProductFavoriteService productFavoriteService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody ProductFavorite productFavorite) {
-        productFavoriteService.add(productFavorite);
+    public Result add(@Valid @RequestBody ProductFavoriteAddRequest request) {
+        productFavoriteService.add(request.toEntity());
         return Result.success();
     }
 

@@ -1,10 +1,15 @@
 package com.smartore.goods.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.goods.dto.ProductReviewAuditRequest;
+import com.smartore.goods.dto.ProductReviewCreateRequest;
 import com.smartore.goods.entity.ProductReview;
 import com.smartore.goods.service.ProductReviewService;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,14 +22,14 @@ public class ProductReviewController {
     private ProductReviewService productReviewService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody ProductReview productReview) {
-        productReviewService.add(productReview);
+    public Result add(@Valid @RequestBody ProductReviewCreateRequest request) {
+        productReviewService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/audit")
-    public Result audit(@RequestBody ProductReview productReview) {
-        productReviewService.audit(productReview);
+    public Result audit(@Valid @RequestBody ProductReviewAuditRequest request) {
+        productReviewService.audit(request.toEntity());
         return Result.success();
     }
 
@@ -36,8 +41,10 @@ public class ProductReviewController {
 
     @GetMapping("/selectPage")
     public Result selectPage(ProductReview productReview,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                             @RequestParam(defaultValue = "10")
+                             @Min(value = 1, message = "每页条数最小为1")
+                             @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<ProductReview> pageInfo = productReviewService.selectPage(productReview, pageNum, pageSize);
         return Result.success(pageInfo);
     }

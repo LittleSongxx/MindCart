@@ -1,10 +1,16 @@
 package com.smartore.ai.controller;
 
-import com.smartore.common.result.Result;
+import com.smartore.ai.dto.FunctionToolSaveRequest;
 import com.smartore.ai.entity.FunctionTool;
 import com.smartore.ai.service.FunctionToolService;
+import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,14 +23,14 @@ public class FunctionToolController {
     private FunctionToolService functionToolService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody FunctionTool functionTool) {
-        functionToolService.add(functionTool);
+    public Result add(@Validated(Create.class) @RequestBody FunctionToolSaveRequest request) {
+        functionToolService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result update(@RequestBody FunctionTool functionTool) {
-        functionToolService.updateById(functionTool);
+    public Result update(@Validated(Update.class) @RequestBody FunctionToolSaveRequest request) {
+        functionToolService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -42,8 +48,11 @@ public class FunctionToolController {
 
     @GetMapping("/selectPage")
     public Result selectPage(FunctionTool functionTool,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                            @RequestParam(defaultValue = "1")
+                            @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                            @RequestParam(defaultValue = "10")
+                            @Min(value = 1, message = "每页条数最小为1")
+                            @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<FunctionTool> pageInfo = functionToolService.selectPage(functionTool, pageNum, pageSize);
         return Result.success(pageInfo);
     }

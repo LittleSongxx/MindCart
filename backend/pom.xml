@@ -111,7 +111,7 @@
     </dependencies>
   </dependencyManagement>
 
-  <!-- 所有模块共有的测试依赖：Testcontainers 由 Boot BOM 管版本 -->
+  <!-- 所有模块共有的依赖：Testcontainers 与 Lombok 由 Boot BOM 管版本 -->
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -128,6 +128,13 @@
       <artifactId>mysql</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- 在父 pom 统一声明：此前只有 voice 用 Lombok，其余模块手写实体存取器，同一份代码库两种风格。
+         optional 保证不向 api 契约模块的使用方传递。 -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
@@ -136,6 +143,15 @@
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
+          <!-- Lombok 只在编译期生效，打进 fat jar 只是白占体积 -->
+          <configuration>
+            <excludes>
+              <exclude>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+              </exclude>
+            </excludes>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

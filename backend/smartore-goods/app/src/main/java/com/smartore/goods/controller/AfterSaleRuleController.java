@@ -1,10 +1,16 @@
 package com.smartore.goods.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
+import com.smartore.goods.dto.AfterSaleRuleSaveRequest;
 import com.smartore.goods.entity.AfterSaleRule;
 import com.smartore.goods.service.AfterSaleRuleService;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,14 +23,14 @@ public class AfterSaleRuleController {
     private AfterSaleRuleService afterSaleRuleService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody AfterSaleRule afterSaleRule) {
-        afterSaleRuleService.add(afterSaleRule);
+    public Result add(@Validated(Create.class) @RequestBody AfterSaleRuleSaveRequest request) {
+        afterSaleRuleService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result update(@RequestBody AfterSaleRule afterSaleRule) {
-        afterSaleRuleService.updateById(afterSaleRule);
+    public Result update(@Validated(Update.class) @RequestBody AfterSaleRuleSaveRequest request) {
+        afterSaleRuleService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -42,8 +48,10 @@ public class AfterSaleRuleController {
 
     @GetMapping("/selectPage")
     public Result selectPage(AfterSaleRule afterSaleRule,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                             @RequestParam(defaultValue = "10")
+                             @Min(value = 1, message = "每页条数最小为1")
+                             @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<AfterSaleRule> pageInfo = afterSaleRuleService.selectPage(afterSaleRule, pageNum, pageSize);
         return Result.success(pageInfo);
     }

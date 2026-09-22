@@ -1,10 +1,16 @@
 package com.smartore.goods.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
+import com.smartore.goods.dto.ProductBrandSaveRequest;
 import com.smartore.goods.entity.ProductBrand;
 import com.smartore.goods.service.ProductBrandService;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,14 +23,14 @@ public class ProductBrandController {
     private ProductBrandService productBrandService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody ProductBrand productBrand) {
-        productBrandService.add(productBrand);
+    public Result add(@Validated(Create.class) @RequestBody ProductBrandSaveRequest request) {
+        productBrandService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result update(@RequestBody ProductBrand productBrand) {
-        productBrandService.updateById(productBrand);
+    public Result update(@Validated(Update.class) @RequestBody ProductBrandSaveRequest request) {
+        productBrandService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -48,8 +54,10 @@ public class ProductBrandController {
 
     @GetMapping("/selectPage")
     public Result selectPage(ProductBrand productBrand,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                             @RequestParam(defaultValue = "10")
+                             @Min(value = 1, message = "每页条数最小为1")
+                             @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<ProductBrand> pageInfo = productBrandService.selectPage(productBrand, pageNum, pageSize);
         return Result.success(pageInfo);
     }

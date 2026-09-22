@@ -1,9 +1,12 @@
 package com.smartore.trade.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.trade.dto.ShoppingCartAddRequest;
+import com.smartore.trade.dto.ShoppingCartUpdateRequest;
 import com.smartore.trade.entity.ShoppingCart;
 import com.smartore.trade.service.ShoppingCartService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,14 +19,14 @@ public class ShoppingCartController {
     private ShoppingCartService shoppingCartService;
 
     @PostMapping("/add")
-    public Result<Void> add(@RequestBody ShoppingCart shoppingCart) {
-        shoppingCartService.add(shoppingCart);
+    public Result<Void> add(@Valid @RequestBody ShoppingCartAddRequest request) {
+        shoppingCartService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result<Void> update(@RequestBody ShoppingCart shoppingCart) {
-        shoppingCartService.updateById(shoppingCart);
+    public Result<Void> update(@Valid @RequestBody ShoppingCartUpdateRequest request) {
+        shoppingCartService.updateById(request.toEntity());
         return Result.success();
     }
 

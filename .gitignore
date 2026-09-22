@@ -18,6 +18,9 @@ run/*.env
 .vscode/
 .DS_Store
 
+# ---- 本地 AI 助手会话状态（计划草稿等，随人随机器变化）----
+.zcode/
+
 # ---- logs & uploads ----
 logs/
 files/

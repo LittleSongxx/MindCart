@@ -6,6 +6,7 @@ import com.smartore.user.entity.WalletRechargeRequest;
 import com.smartore.user.entity.WalletRecord;
 import com.smartore.user.service.WalletRecordService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class WalletRecordController {
     private WalletRecordService walletRecordService;
 
     @PostMapping("/recharge")
-    public Result<User> recharge(@RequestBody WalletRechargeRequest request) {
+    public Result<User> recharge(@Valid @RequestBody WalletRechargeRequest request) {
         return Result.success(walletRecordService.recharge(request));
     }
 

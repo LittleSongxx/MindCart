@@ -1,10 +1,16 @@
 package com.smartore.ai.controller;
 
-import com.smartore.common.result.Result;
+import com.smartore.ai.dto.ProductKnowledgeSaveRequest;
 import com.smartore.ai.entity.ProductKnowledge;
 import com.smartore.ai.service.ProductKnowledgeService;
+import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +23,8 @@ public class ProductKnowledgeController {
     private ProductKnowledgeService productKnowledgeService;
 
     @PostMapping("/add")
-    public Result add(@RequestBody ProductKnowledge productKnowledge) {
-        productKnowledgeService.add(productKnowledge);
+    public Result add(@Validated(Create.class) @RequestBody ProductKnowledgeSaveRequest request) {
+        productKnowledgeService.add(request.toEntity());
         return Result.success();
     }
 
@@ -35,8 +41,8 @@ public class ProductKnowledgeController {
     }
 
     @PutMapping("/update")
-    public Result update(@RequestBody ProductKnowledge productKnowledge) {
-        productKnowledgeService.updateById(productKnowledge);
+    public Result update(@Validated(Update.class) @RequestBody ProductKnowledgeSaveRequest request) {
+        productKnowledgeService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -60,8 +66,11 @@ public class ProductKnowledgeController {
 
     @GetMapping("/selectPage")
     public Result selectPage(ProductKnowledge productKnowledge,
-                             @RequestParam(defaultValue = "1") Integer pageNum,
-                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                             @RequestParam(defaultValue = "1")
+                             @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                             @RequestParam(defaultValue = "10")
+                             @Min(value = 1, message = "每页条数最小为1")
+                             @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         PageInfo<ProductKnowledge> pageInfo = productKnowledgeService.selectPage(productKnowledge, pageNum, pageSize);
         return Result.success(pageInfo);
     }

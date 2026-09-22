@@ -7,6 +7,9 @@ import com.smartore.trade.entity.ShopOrder;
 import com.smartore.trade.service.OrderSagaService;
 import com.smartore.trade.service.ShopOrderService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,9 +23,13 @@ public class ShopOrderController {
     @Resource
     private OrderSagaService orderSagaService;
 
-    /** 下单（Saga 编排）：请求体需带 requestId 幂等键，前端每次提交生成、重试复用 */
+    /**
+     * 下单（Saga 编排）：请求体需带 requestId 幂等键，前端每次提交生成、重试复用。
+     * 校验放在进入 Saga 之前——Saga 内部有"保持 PAYING 交给恢复任务"的模糊失败路径，
+     * 明显的参数错误不该走到那里去占用恢复任务的判定窗口。
+     */
     @PostMapping("/create")
-    public Result<ShopOrder> create(@RequestBody OrderCreateRequest request) {
+    public Result<ShopOrder> create(@Valid @RequestBody OrderCreateRequest request) {
         return Result.success(orderSagaService.create(request));
     }
 
@@ -51,8 +58,11 @@ public class ShopOrderController {
 
     @GetMapping("/selectPage")
     public Result<PageInfo<ShopOrder>> selectPage(ShopOrder condition,
-                                                  @RequestParam(defaultValue = "1") Integer pageNum,
-                                                  @RequestParam(defaultValue = "10") Integer pageSize) {
+                                                  @RequestParam(defaultValue = "1")
+                                                  @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                                                  @RequestParam(defaultValue = "10")
+                                                  @Min(value = 1, message = "每页条数最小为1")
+                                                  @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         return Result.success(shopOrderService.selectPage(condition, pageNum, pageSize));
     }
 }

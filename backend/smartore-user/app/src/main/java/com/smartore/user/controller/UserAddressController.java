@@ -1,9 +1,13 @@
 package com.smartore.user.controller;
 
 import com.smartore.common.result.Result;
+import com.smartore.common.validation.Create;
+import com.smartore.common.validation.Update;
+import com.smartore.user.dto.AddressSaveRequest;
 import com.smartore.user.entity.UserAddress;
 import com.smartore.user.service.UserAddressService;
 import jakarta.annotation.Resource;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,14 +20,18 @@ public class UserAddressController {
     private UserAddressService userAddressService;
 
     @PostMapping("/add")
-    public Result<Void> add(@RequestBody UserAddress userAddress) {
-        userAddressService.add(userAddress);
+    public Result<Void> add(@Validated(Create.class) @RequestBody AddressSaveRequest request) {
+        userAddressService.add(request.toEntity());
         return Result.success();
     }
 
+    /**
+     * 更新：现有前端提交的是完整表单，因此格式校验按 {Create, Update} 分组照常执行；
+     * 只提交部分字段也允许（必填校验只在 Create 分组），归属校验仍在服务层。
+     */
     @PutMapping("/update")
-    public Result<Void> update(@RequestBody UserAddress userAddress) {
-        userAddressService.updateById(userAddress);
+    public Result<Void> update(@Validated(Update.class) @RequestBody AddressSaveRequest request) {
+        userAddressService.updateById(request.toEntity());
         return Result.success();
     }
 

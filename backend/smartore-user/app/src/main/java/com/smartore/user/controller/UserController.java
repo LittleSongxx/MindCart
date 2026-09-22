@@ -1,14 +1,24 @@
 package com.smartore.user.controller;
 
 import com.github.pagehelper.PageInfo;
+import com.smartore.common.context.UserContext;
+import com.smartore.common.exception.CustomException;
 import com.smartore.common.result.Result;
+import com.smartore.common.result.ResultCodeEnum;
+import com.smartore.user.dto.LoginRequest;
+import com.smartore.user.dto.RegisterRequest;
+import com.smartore.user.dto.UpdatePasswordRequest;
+import com.smartore.user.dto.UserSaveRequest;
+import com.smartore.user.dto.UserUpdateRequest;
 import com.smartore.user.entity.User;
 import com.smartore.user.service.UserService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 账号接口。登录/注册在网关白名单内；管理类操作由网关 RBAC 限制 ADMIN。
@@ -21,14 +31,14 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/add")
-    public Result<Void> add(@RequestBody User user) {
-        userService.add(user);
+    public Result<Void> add(@Valid @RequestBody UserSaveRequest request) {
+        userService.add(request.toEntity());
         return Result.success();
     }
 
     @PutMapping("/update")
-    public Result<Void> update(@RequestBody User user) {
-        userService.updateById(user);
+    public Result<Void> update(@Valid @RequestBody UserUpdateRequest request) {
+        userService.updateById(request.toEntity());
         return Result.success();
     }
 
@@ -47,10 +57,8 @@ public class UserController {
     @GetMapping("/selectById/{id}")
     public Result<User> selectById(@PathVariable Integer id) {
         // 非管理员只能查自己（余额/联系方式属敏感信息）
-        if (!com.smartore.common.context.UserContext.isAdmin()
-                && !id.equals(com.smartore.common.context.UserContext.requireUserId())) {
-            throw new com.smartore.common.exception.CustomException(
-                    com.smartore.common.result.ResultCodeEnum.FORBIDDEN);
+        if (!UserContext.isAdmin() && !id.equals(UserContext.requireUserId())) {
+            throw new CustomException(ResultCodeEnum.FORBIDDEN);
         }
         return Result.success(userService.selectById(id));
     }
@@ -62,29 +70,29 @@ public class UserController {
 
     @GetMapping("/selectPage")
     public Result<PageInfo<User>> selectPage(User user,
-                                             @RequestParam(defaultValue = "1") Integer pageNum,
-                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+                                             @RequestParam(defaultValue = "1")
+                                             @Min(value = 1, message = "页码最小为1") Integer pageNum,
+                                             @RequestParam(defaultValue = "10")
+                                             @Min(value = 1, message = "每页条数最小为1")
+                                             @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         return Result.success(userService.selectPage(user, pageNum, pageSize));
     }
 
     @PostMapping("/login")
-    public Result<User> login(@RequestBody User user) {
-        return Result.success(userService.login(user));
+    public Result<User> login(@Valid @RequestBody LoginRequest request) {
+        return Result.success(userService.login(request.toEntity()));
     }
 
     @PostMapping("/register")
-    public Result<Void> register(@RequestBody User account) {
-        User user = new User();
-        user.setUsername(account.getUsername());
-        user.setPassword(account.getPassword());
-        userService.register(user);
+    public Result<Void> register(@Valid @RequestBody RegisterRequest request) {
+        userService.register(request.toEntity());
         return Result.success();
     }
 
     /** 改密码：以当前登录用户为准（网关已认证），不再信任请求体身份 */
     @PutMapping("/updatePassword")
-    public Result<Void> updatePassword(@RequestBody Map<String, String> body) {
-        userService.updatePassword(body.get("password"), body.get("newPassword"));
+    public Result<Void> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
+        userService.updatePassword(request.getPassword(), request.getNewPassword());
         return Result.success();
     }
 }
