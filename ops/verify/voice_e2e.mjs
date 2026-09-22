@@ -3,8 +3,9 @@
 //   开发（vite dev）：BASE=http://localhost:5173
 //   Docker 部署（web 容器）：BASE=http://localhost:8081
 import { chromium } from 'playwright-core';
+import { resolveChromium } from './lib/browser.mjs';
 
-const exe = process.env.HOME + '/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome';
+const exe = resolveChromium();
 const BASE = process.env.BASE || 'http://localhost:5173';
 const results = [];
 const ok = (name, pass, detail = '') => {

@@ -1,8 +1,9 @@
 // 管理端"语音会话与归因"页浏览器验收：指标卡 + 会话表 + 详情弹窗（对话流水/归因订单）。
 // 运行：BASE=http://localhost:8081 node ops/verify/voice_manager_e2e.mjs
 import { chromium } from 'playwright-core';
+import { resolveChromium } from './lib/browser.mjs';
 
-const exe = process.env.HOME + '/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome';
+const exe = resolveChromium();
 const BASE = process.env.BASE || 'http://localhost:8081';
 const results = [];
 const ok = (name, pass, detail = '') => {

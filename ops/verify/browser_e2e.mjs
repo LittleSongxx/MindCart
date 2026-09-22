@@ -1,8 +1,8 @@
 import { chromium } from 'playwright-core';
-import { globSync } from 'node:fs';
+import { resolveChromium } from './lib/browser.mjs';
 
 const BASE = process.env.BASE || 'http://localhost:5173';
-const exe = process.env.HOME + '/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome';
+const exe = resolveChromium();
 const results = [];
 const ok = (name, pass, detail = '') => { results.push([name, pass, detail]); console.log((pass ? 'PASS ' : 'FAIL ') + name + (detail ? ' | ' + detail : '')); };
 

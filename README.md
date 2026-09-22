@@ -191,6 +191,28 @@ docs/adr/              架构决策
 > 容器栈下重建某个服务后，若经 `http://localhost:8081/api/...` 返回 502 而直连 9080 正常，
 > 是 nginx 缓存了容器的旧 IP：`docker restart smartore-web` 即可。
 
+## 怎么验证它真的能跑
+
+不只看截图，下面这些都能在本地重跑。前两条不需要起服务，后两条需要。
+
+```bash
+cd backend && mvn test          # 100+ 用例：单元 + Testcontainers 真 MySQL（+ 真 Redis）集成
+                                # 跑完看 backend/smartore-trade/app/target/site/jacoco/index.html
+
+# 以下需要先 ./scripts/dev.sh up（或容器栈），网关在 9080
+python3 ops/verify/trade_e2e.py     # 交易链路：下单→幂等重放→库存扣减→取消退款→回补
+python3 ops/verify/oversell_test.py # 并发下单不超卖（需要一个库存很小的商品）
+python3 ops/verify/eval_ai.py       # AI 评测：导购 Pass@1、问答拒答、检索 Recall@3（需模型 Key）
+
+# 浏览器全链路（含 SSE 流式问答）；BASE 指向前端入口，jar 方式 5173 / 容器方式 8081
+BASE=http://localhost:8081 node ops/verify/browser_e2e.mjs
+BASE=http://localhost:8081 node ops/verify/voice_e2e.mjs           # 语音导购对话
+BASE=http://localhost:8081 node ops/verify/voice_manager_e2e.mjs   # 管理端语音会话与归因
+```
+
+浏览器脚本依赖 playwright 的 chromium，首次运行需要 `npx playwright install chromium`；
+已装在非默认位置时用 `CHROME_PATH` 指定。
+
 ## 快速开始
 
 依赖本机 Docker、JDK 21、Maven、Node.js 22。
@@ -231,4 +253,8 @@ docker compose -f deploy/compose.apps.yaml up -d --build
 
 ## 这个仓库里没有的东西
 
-内部审计台账、一次性验收摘录和实施状态草稿不在这里。架构说明和 `docs/adr/` 里的决策记录保留，因为它们就是这套系统为什么这样拆。
+内部的过程台账（排期、验收摘录、实施状态草稿）不在这里——那些是给自己看的。
+架构说明和 `docs/adr/` 里的决策记录保留，因为它们就是这套系统为什么这样拆。
+
+管理端的**操作审计**是另一回事，它是系统功能不是过程文档：谁在什么时候改了价格、
+库存、模型配置，都落在各服务自己的 `oper_log` 表里，接口在 `/operLog` 与 `/aiOperLog`。
