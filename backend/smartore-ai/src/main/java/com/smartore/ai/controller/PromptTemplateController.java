@@ -3,6 +3,7 @@ package com.smartore.ai.controller;
 import com.smartore.ai.dto.PromptTemplateSaveRequest;
 import com.smartore.ai.entity.PromptTemplate;
 import com.smartore.ai.service.PromptTemplateService;
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class PromptTemplateController {
     @Resource
     private PromptTemplateService promptTemplateService;
 
+    @OperationLog(module = "提示词", action = "新增提示词模板")
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody PromptTemplateSaveRequest request) {
         promptTemplateService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "提示词", action = "修改提示词模板（影响全站回答）")
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody PromptTemplateSaveRequest request) {
         promptTemplateService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "提示词", action = "删除提示词模板")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         promptTemplateService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "提示词", action = "批量删除提示词模板")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         promptTemplateService.deleteBatch(ids);

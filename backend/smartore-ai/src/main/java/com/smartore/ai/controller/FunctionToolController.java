@@ -3,6 +3,7 @@ package com.smartore.ai.controller;
 import com.smartore.ai.dto.FunctionToolSaveRequest;
 import com.smartore.ai.entity.FunctionTool;
 import com.smartore.ai.service.FunctionToolService;
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class FunctionToolController {
     @Resource
     private FunctionToolService functionToolService;
 
+    @OperationLog(module = "工具配置", action = "新增函数工具")
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody FunctionToolSaveRequest request) {
         functionToolService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "工具配置", action = "修改函数工具")
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody FunctionToolSaveRequest request) {
         functionToolService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "工具配置", action = "删除函数工具")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         functionToolService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "工具配置", action = "批量删除函数工具")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         functionToolService.deleteBatch(ids);

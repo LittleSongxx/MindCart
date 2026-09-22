@@ -56,7 +56,9 @@ public class ProductService {
         validate(product);
         Product dbProduct = productMapper.selectByProductNo(product.getProductNo());
         if (ObjectUtil.isNotNull(dbProduct) && !dbProduct.getId().equals(product.getId())) {
-            throw new CustomException(ResultCodeEnum.PARAM_ERROR);
+            // 带上编号与占用方 id：只回"参数错误"的话，管理端改商品时会完全不知道哪里不对
+            throw new CustomException(ResultCodeEnum.PARAM_ERROR,
+                    "商品编号已被占用：" + product.getProductNo() + "（商品ID " + dbProduct.getId() + "）");
         }
         setDefaultValue(product);
         product.setUpdateTime(DateUtil.now());

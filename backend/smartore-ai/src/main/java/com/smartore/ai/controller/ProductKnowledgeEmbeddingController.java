@@ -6,6 +6,7 @@ import com.smartore.ai.entity.EmbeddingGenerateProgress;
 import com.smartore.ai.entity.EmbeddingSearchRequest;
 import com.smartore.ai.entity.ProductKnowledgeEmbedding;
 import com.smartore.ai.service.ProductKnowledgeEmbeddingService;
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import jakarta.annotation.Resource;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -32,6 +33,7 @@ public class ProductKnowledgeEmbeddingController {
     }
 
     /** 触发全量生成（异步）：入队即返回，进度经 /generateProgress 轮询 */
+    @OperationLog(module = "知识库", action = "全量重建向量索引")
     @PostMapping("/generateAll")
     public Result<Void> generateAll() {
         rabbitTemplate.convertAndSend(AiRabbitTopology.EXCHANGE, AiRabbitTopology.ROUTING_EMBEDDING_JOB, "all");

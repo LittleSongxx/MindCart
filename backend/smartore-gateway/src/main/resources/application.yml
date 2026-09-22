@@ -34,13 +34,13 @@ spring:
               predicates: [ "Path=/user/**,/userAddress/**,/wallet/**,/files/**" ]
             - id: goods
               uri: lb://smartore-goods
-              predicates: [ "Path=/product/**,/productBrand/**,/productCategory/**,/productParam/**,/productDetail/**,/productFavorite/**,/productReview/**,/afterSaleRule/**" ]
+              predicates: [ "Path=/product/**,/productBrand/**,/productCategory/**,/productParam/**,/productDetail/**,/productFavorite/**,/productReview/**,/afterSaleRule/**,/operLog/**" ]
             - id: trade
               uri: lb://smartore-trade
               predicates: [ "Path=/shoppingCart/**,/shopOrder/**" ]
             - id: ai
               uri: lb://smartore-ai
-              predicates: [ "Path=/aiModelConfig/**,/promptTemplate/**,/functionTool/**,/productTool/**,/businessTool/**,/productKnowledge/**,/productKnowledgeChunk/**,/productKnowledgeEmbedding/**,/agentRun/**,/agentStep/**,/shoppingGuideTask/**,/shoppingRecommendation/**,/shoppingQa/**,/shoppingReviewAnalysis/**,/shoppingGrowthReport/**" ]
+              predicates: [ "Path=/aiModelConfig/**,/promptTemplate/**,/functionTool/**,/productTool/**,/businessTool/**,/productKnowledge/**,/productKnowledgeChunk/**,/productKnowledgeEmbedding/**,/agentRun/**,/agentStep/**,/shoppingGuideTask/**,/shoppingRecommendation/**,/shoppingQa/**,/shoppingReviewAnalysis/**,/shoppingGrowthReport/**,/aiOperLog/**" ]
             # 语音导购（新增互补服务，未启动时仅 /voice/** 503，不影响其他路由）
             # WS 升级与-plain HTTP 分开两条：lb:ws:// 只承接 WebSocket 握手
             - id: voice-ws
@@ -137,6 +137,9 @@ smartore:
       - "POST /productDetail/save"
       - "PUT /productReview/audit"
       - "/afterSaleRule/**"
+      # 操作审计查询：谁改了什么，只给管理员看（审计表分库，goods 与 ai 各一个入口）
+      - "GET /operLog/**"
+      - "GET /aiOperLog/**"
       - "/aiModelConfig/**"
       - "/promptTemplate/**"
       - "/functionTool/**"

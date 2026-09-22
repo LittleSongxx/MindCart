@@ -3,6 +3,7 @@ package com.smartore.ai.controller;
 import com.smartore.ai.dto.AiModelConfigSaveRequest;
 import com.smartore.ai.entity.AiModelConfig;
 import com.smartore.ai.service.AiModelConfigService;
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class AiModelConfigController {
     @Resource
     private AiModelConfigService aiModelConfigService;
 
+    @OperationLog(module = "模型配置", action = "新增模型配置", recordArgs = false)
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody AiModelConfigSaveRequest request) {
         aiModelConfigService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "模型配置", action = "修改模型配置", recordArgs = false)
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody AiModelConfigSaveRequest request) {
         aiModelConfigService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "模型配置", action = "删除模型配置")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         aiModelConfigService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "模型配置", action = "批量删除模型配置")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         aiModelConfigService.deleteBatch(ids);

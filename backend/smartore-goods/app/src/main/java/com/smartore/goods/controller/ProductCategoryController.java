@@ -1,5 +1,6 @@
 package com.smartore.goods.controller;
 
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class ProductCategoryController {
     @Resource
     private ProductCategoryService productCategoryService;
 
+    @OperationLog(module = "分类管理", action = "新增分类")
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody ProductCategorySaveRequest request) {
         productCategoryService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "分类管理", action = "修改分类")
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody ProductCategorySaveRequest request) {
         productCategoryService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "分类管理", action = "删除分类")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         productCategoryService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "分类管理", action = "批量删除分类")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         productCategoryService.deleteBatch(ids);

@@ -82,6 +82,13 @@
       <artifactId>micrometer-core</artifactId>
       <optional>true</optional>
     </dependency>
+    <!-- 审计切面：optional 表示不传递给使用方，需要审计的服务各自声明 starter-aop。
+         注意 OperationLogAspect 上带 @ConditionalOnClass，没有 AOP 的服务不会加载它。 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- 接口文档的公共 OpenAPI 元信息：只用到 swagger-models 里的 OpenAPI/Info，
          由 springdoc 的 starter-common 传递进来（版本走 springdoc BOM） -->
     <dependency>

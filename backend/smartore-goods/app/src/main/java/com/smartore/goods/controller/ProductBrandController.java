@@ -1,5 +1,6 @@
 package com.smartore.goods.controller;
 
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class ProductBrandController {
     @Resource
     private ProductBrandService productBrandService;
 
+    @OperationLog(module = "品牌管理", action = "新增品牌")
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody ProductBrandSaveRequest request) {
         productBrandService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "品牌管理", action = "修改品牌")
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody ProductBrandSaveRequest request) {
         productBrandService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "品牌管理", action = "删除品牌")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         productBrandService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "品牌管理", action = "批量删除品牌")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         productBrandService.deleteBatch(ids);

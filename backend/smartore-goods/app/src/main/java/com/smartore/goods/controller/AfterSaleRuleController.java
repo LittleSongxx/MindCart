@@ -1,5 +1,6 @@
 package com.smartore.goods.controller;
 
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.common.validation.Create;
 import com.smartore.common.validation.Update;
@@ -22,24 +23,28 @@ public class AfterSaleRuleController {
     @Resource
     private AfterSaleRuleService afterSaleRuleService;
 
+    @OperationLog(module = "售后规则", action = "新增售后规则")
     @PostMapping("/add")
     public Result add(@Validated(Create.class) @RequestBody AfterSaleRuleSaveRequest request) {
         afterSaleRuleService.add(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "售后规则", action = "修改售后规则")
     @PutMapping("/update")
     public Result update(@Validated(Update.class) @RequestBody AfterSaleRuleSaveRequest request) {
         afterSaleRuleService.updateById(request.toEntity());
         return Result.success();
     }
 
+    @OperationLog(module = "售后规则", action = "删除售后规则")
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
         afterSaleRuleService.deleteById(id);
         return Result.success();
     }
 
+    @OperationLog(module = "售后规则", action = "批量删除售后规则")
     @DeleteMapping("/delete/batch")
     public Result delete(@RequestBody List<Integer> ids) {
         afterSaleRuleService.deleteBatch(ids);

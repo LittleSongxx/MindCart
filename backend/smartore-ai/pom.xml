@@ -100,6 +100,11 @@
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
     </dependency>
+    <!-- 审计切面（OperationLogAspect 在 common，需要 AOP 支持才生效） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

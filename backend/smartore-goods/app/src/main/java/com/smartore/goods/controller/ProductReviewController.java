@@ -1,5 +1,6 @@
 package com.smartore.goods.controller;
 
+import com.smartore.common.audit.OperationLog;
 import com.smartore.common.result.Result;
 import com.smartore.goods.dto.ProductReviewAuditRequest;
 import com.smartore.goods.dto.ProductReviewCreateRequest;
@@ -27,6 +28,7 @@ public class ProductReviewController {
         return Result.success();
     }
 
+    @OperationLog(module = "评价管理", action = "审核评价")
     @PutMapping("/audit")
     public Result audit(@Valid @RequestBody ProductReviewAuditRequest request) {
         productReviewService.audit(request.toEntity());
