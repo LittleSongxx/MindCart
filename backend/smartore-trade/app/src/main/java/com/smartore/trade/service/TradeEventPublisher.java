@@ -31,6 +31,17 @@ public class TradeEventPublisher {
     public static final String EXCHANGE = "smartore.trade";
     public static final String ROUTING_EVENT = "trade.event";
 
+    /** 重试次数上限：超过即转 FAILED 等人工介入（不再无限滞留 PENDING） */
+    private static final int MAX_ATTEMPTS = 10;
+    /** 单轮最多投递条数：限制一次中继对 broker 的瞬时压力 */
+    private static final int BATCH_SIZE = 50;
+    /**
+     * 退避表（秒）：第 n 次失败后隔多久再试，最长一档对超出长度的次数复用。
+     * 原先固定每 3 秒重投全部 PENDING，broker 故障时会持续硬拍打——而 broker 恢复
+     * 通常是以分钟计的，3 秒一轮除了制造日志噪声并不加快恢复。
+     */
+    private static final int[] RETRY_BACKOFF_SECONDS = {5, 15, 30, 120, 300, 900, 1800};
+
     @Resource
     private TradeEventLedgerMapper ledgerMapper;
     @Resource
@@ -62,23 +73,62 @@ public class TradeEventPublisher {
         }
     }
 
-    /** 中继：每 3 秒重投未发布事件（含提交后首投失败的那些） */
+    /** 中继：每 3 秒捞一次"退避时间已到"的未发布事件（含提交后首投失败的那些） */
     @Scheduled(fixedDelay = 3000)
     public void relayPending() {
-        // 重试耗尽的事件转 FAILED（可观察、可人工复位重投，见 V3 迁移注释），不再无限滞留在 PENDING
-        int failed = ledgerMapper.markFailedExhausted();
+        // 重试耗尽的事件转 FAILED（可观察、可用 /shopOrder/replayOutbox 复位重投）
+        int failed = ledgerMapper.markFailedExhausted(MAX_ATTEMPTS);
         if (failed > 0) {
-            log.error("Outbox 事件重试耗尽转 FAILED，共 {} 条——Rabbit 可能长时间不可用，请人工处置后复位", failed);
+            log.error("Outbox 事件重试耗尽转 FAILED，共 {} 条——Rabbit 可能长时间不可用，"
+                    + "处置后调 /shopOrder/replayOutbox 复位重投", failed);
         }
-        List<TradeEventLedger> pending = ledgerMapper.selectPending();
+        List<TradeEventLedger> pending = ledgerMapper.selectPending(MAX_ATTEMPTS, BATCH_SIZE);
         for (TradeEventLedger event : pending) {
             boolean ok = publishOne(event);
             if (ok) {
                 ledgerMapper.markPublished(event.getId());
             } else {
-                ledgerMapper.increaseAttempts(event.getId());
+                int attempts = event.getPublishAttempts() == null ? 0 : event.getPublishAttempts();
+                int delay = backoffSeconds(attempts + 1);
+                ledgerMapper.increaseAttempts(event.getId(), delay);
+                log.warn("事件投递失败，第 {} 次重试将在 {}s 后（eventId={}）",
+                        attempts + 1, delay, event.getEventId());
             }
         }
+    }
+
+    /** 第 attempts 次失败后的等待秒数（attempts 从 1 开始；超出退避表长度复用最后一档） */
+    private int backoffSeconds(int attempts) {
+        if (attempts <= 0) {
+            return RETRY_BACKOFF_SECONDS[0];
+        }
+        int index = Math.min(attempts, RETRY_BACKOFF_SECONDS.length) - 1;
+        return RETRY_BACKOFF_SECONDS[index];
+    }
+
+    /**
+     * 人工复位重投：把 FAILED 事件置回 PENDING 并清零次数与退避。
+     * 返回复位条数，由调用方（管理端接口）回给运维确认。
+     */
+    public int replayExhausted() {
+        int replayed = ledgerMapper.replayExhausted();
+        if (replayed > 0) {
+            log.warn("人工复位 Outbox 事件 {} 条，中继将重新投递", replayed);
+        }
+        return replayed;
+    }
+
+    /** 账本水位：PENDING/FAILED/PUBLISHED 各多少条 */
+    public java.util.Map<String, Integer> stats() {
+        java.util.Map<String, Integer> result = new java.util.LinkedHashMap<>();
+        for (java.util.Map<String, Object> row : ledgerMapper.countByStatus()) {
+            result.put(String.valueOf(row.get("status")), ((Number) row.get("total")).intValue());
+        }
+        // 没有该状态的行也要显示为 0，否则看板上会出现"缺项"而不是"清零"
+        for (String status : List.of("PENDING", "PUBLISHED", "FAILED")) {
+            result.putIfAbsent(status, 0);
+        }
+        return result;
     }
 
     private void publishPendingQuietly() {

@@ -154,6 +154,9 @@ smartore:
       - "/agentStep/**"
       - "PUT /shopOrder/ship/**"
       - "GET /shopOrder/selectPage"
+      # Outbox 运维：账本水位可看，复位重投会真的重发消息
+      - "GET /shopOrder/outboxStats"
+      - "POST /shopOrder/replayOutbox"
       - "GET /shoppingQa/selectPage"
       - "DELETE /shoppingQa/delete/**"
       - "DELETE /shoppingGuideTask/delete/**"

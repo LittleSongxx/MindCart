@@ -142,7 +142,8 @@ flowchart LR
                               Outbox → RabbitMQ → AI 镜像
 ```
 
-六个服务的边界、为什么不用 Seata、导购为什么走队列，写在 `docs/adr/` 和 `docs/architecture.md`。
+六个服务的边界、为什么不用 Seata、导购为什么走队列、缓存允许多大陈旧，
+写在 `docs/adr/` 和 `docs/architecture.md`。
 
 ## 技术栈
 
@@ -153,22 +154,42 @@ flowchart LR
 | **数据** | MySQL 四库（user / goods / trade / ai，Flyway）· PostgreSQL + pgvector（语音） |
 | **中间件** | Redis · RabbitMQ · Nacos |
 | **AI** | OpenAI 兼容接口 · 混合检索 · 导购工具调用 · 商品页 SSE 问答 |
+| **工程化** | 请求 DTO + Bean Validation · Redis 缓存 · springdoc 接口文档 · 操作审计 · JaCoCo |
 | **交付** | Docker Compose · GitHub Actions（测试、前端构建、手动部署） |
+
+写接口统一收请求 DTO 并做分组校验（字段边界与越权字段在入口就拦掉），
+商品目录挂 Redis 缓存（库存变动精确失效单品键），管理端写操作留痕可查，
+接口文档在网关聚合成一页，`mvn test` 出覆盖率报告。这些约定的取舍见 ADR-0012 / ADR-0013。
 
 ```
 backend/
-  smartore-common/     返回体、异常、用户上下文、内部调用
-  smartore-gateway/    认证、权限、限流
+  smartore-common/     返回体、异常、用户上下文、内部调用、共享装配（缓存/文档/审计）
+  smartore-gateway/    认证、权限、限流、接口文档聚合
   smartore-user/       账号、地址、钱包
-  smartore-goods/      商品、库存、评价、售后规则
-  smartore-trade/      购物车、订单 Saga、Outbox
-  smartore-ai/         模型配置、知识库、导购、问答
+  smartore-goods/      商品、库存、评价、售后规则、缓存、审计
+  smartore-trade/      购物车、订单 Saga、Outbox（退避重投）
+  smartore-ai/         模型配置、知识库、导购、问答、审计
   smartore-voice/      语音会话、意图、目录向量
 web/                   Vue 3 前台 + 管理端
 deploy/                中间件与应用 Compose
 ops/                   Nginx、监控、对账、systemd
 docs/adr/              架构决策
 ```
+
+## 运维与排查入口
+
+服务起来之后，这些是排查时的第一站：
+
+| 入口 | 在哪 | 用途 |
+|---|---|---|
+| 接口文档 | `http://localhost:9080/doc.html` | 五个服务的接口一页汇总（容器栈经 `/api` 反代不可达，直连网关） |
+| 操作审计 | `GET /operLog/selectPage`、`GET /aiOperLog/selectPage` | 谁改了价格/库存/模型配置，含失败尝试 |
+| Outbox 水位 | `GET /shopOrder/outboxStats` | PENDING / PUBLISHED / FAILED 计数 |
+| Outbox 复位重投 | `POST /shopOrder/replayOutbox` | Rabbit 故障恢复后把 FAILED 事件重新投递（管理员） |
+| 覆盖率报告 | `backend/*/target/site/jacoco/index.html` | `mvn test` 后生成 |
+
+> 容器栈下重建某个服务后，若经 `http://localhost:8081/api/...` 返回 502 而直连 9080 正常，
+> 是 nginx 缓存了容器的旧 IP：`docker restart smartore-web` 即可。
 
 ## 快速开始
 

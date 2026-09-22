@@ -6,6 +6,7 @@ import com.smartore.trade.entity.OrderCreateRequest;
 import com.smartore.trade.entity.ShopOrder;
 import com.smartore.trade.service.OrderSagaService;
 import com.smartore.trade.service.ShopOrderService;
+import com.smartore.trade.service.TradeEventPublisher;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -22,6 +23,8 @@ public class ShopOrderController {
     private ShopOrderService shopOrderService;
     @Resource
     private OrderSagaService orderSagaService;
+    @Resource
+    private TradeEventPublisher tradeEventPublisher;
 
     /**
      * 下单（Saga 编排）：请求体需带 requestId 幂等键，前端每次提交生成、重试复用。
@@ -64,5 +67,20 @@ public class ShopOrderController {
                                                   @Min(value = 1, message = "每页条数最小为1")
                                                   @Max(value = 200, message = "每页条数最大为200") Integer pageSize) {
         return Result.success(shopOrderService.selectPage(condition, pageNum, pageSize));
+    }
+
+    /** Outbox 账本水位（ADMIN）：PENDING/PUBLISHED/FAILED 各多少条，用于确认 Rabbit 故障影响面 */
+    @GetMapping("/outboxStats")
+    public Result<java.util.Map<String, Integer>> outboxStats() {
+        return Result.success(tradeEventPublisher.stats());
+    }
+
+    /**
+     * 复位重投耗尽的 Outbox 事件（ADMIN）。
+     * 替代过去"只能手写 UPDATE 语句"的处置方式：Rabbit 故障恢复后调一次即可。
+     */
+    @PostMapping("/replayOutbox")
+    public Result<Integer> replayOutbox() {
+        return Result.success(tradeEventPublisher.replayExhausted());
     }
 }

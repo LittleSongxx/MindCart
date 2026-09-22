@@ -107,13 +107,31 @@ public class ShoppingQaController {
         return emitter;
     }
 
-    /** SSE 长任务共享线程池（daemon）：每请求新建线程池属高开销模式 */
-    private static final java.util.concurrent.ExecutorService STREAM_EXECUTOR =
-            java.util.concurrent.Executors.newCachedThreadPool(r -> {
-                Thread t = new Thread(r, "qa-sse-worker");
-                t.setDaemon(true);
-                return t;
-            });
+    /**
+     * SSE 长任务线程池（daemon，全局共享）。
+     *
+     * 这里**必须是有界池**：原先用的是 newCachedThreadPool（无界），一串并发 SSE 请求会
+     * 无限起线程、每个线程还各自打一次 LLM 调用——既是线程耗尽的入口，也是费用失控的入口。
+     * 现在固定核心/最大线程数 + 有界队列；队列打满时由 CallerRunsPolicy 回落到调用线程执行，
+     * 形成天然背压（Tomcat 线程被占住 → 新连接排队），而不是把任务无限堆在内存里。
+     * 容量通过环境变量可调，按机器规格与模型配额定。
+     */
+    private static final java.util.concurrent.ThreadPoolExecutor STREAM_EXECUTOR;
+
+    static {
+        int core = Integer.getInteger("smartore.qa.sse.core-threads", 8);
+        int max = Integer.getInteger("smartore.qa.sse.max-threads", 16);
+        int queue = Integer.getInteger("smartore.qa.sse.queue-capacity", 64);
+        STREAM_EXECUTOR = new java.util.concurrent.ThreadPoolExecutor(
+                core, max, 60L, java.util.concurrent.TimeUnit.SECONDS,
+                new java.util.concurrent.LinkedBlockingQueue<>(queue),
+                r -> {
+                    Thread t = new Thread(r, "qa-sse-worker");
+                    t.setDaemon(true);
+                    return t;
+                },
+                new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+    }
 
     /** 心跳调度器（daemon，全局共享） */
     private static final java.util.concurrent.ScheduledExecutorService HEARTBEAT_SCHEDULER =
