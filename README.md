@@ -185,6 +185,10 @@ cd web && npm install && npm run dev
 
 本地入口：前端 `http://localhost:5173`，网关 `http://localhost:9080`。
 
+<p align="center">
+  <img src="docs/assets/screenshots/smartore-login.png" alt="Smartore 登录页" width="100%" />
+</p>
+
 也可以把前端构建进容器，和六个服务一起起：
 
 ```bash
