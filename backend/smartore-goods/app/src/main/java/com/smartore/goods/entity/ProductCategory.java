@@ -1,6 +1,9 @@
 package com.smartore.goods.entity;
 
-public class ProductCategory {
+import java.io.Serializable;
+
+// 实现 Serializable：分类会经 @Cacheable 写入 Redis
+public class ProductCategory implements Serializable {
 
     private Integer id;
     private String name;

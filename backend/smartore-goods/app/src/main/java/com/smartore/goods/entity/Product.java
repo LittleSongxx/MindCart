@@ -1,8 +1,11 @@
 package com.smartore.goods.entity;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
-public class Product {
+// 实现 Serializable：商品会经 @Cacheable 写入 Redis，
+// 默认 JdkSerializationRedisSerializer 要求 payload 可序列化
+public class Product implements Serializable {
 
     private Integer id;
     private String productNo;

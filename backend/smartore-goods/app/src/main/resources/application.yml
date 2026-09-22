@@ -7,6 +7,13 @@ spring:
     name: smartore-goods
   lifecycle:
     timeout-per-shutdown-phase: 20s
+  # 商品目录读多写少：接 Redis 缓存。装配在 common 的 CacheAutoConfiguration，
+  # 需要 smartore.cache.enabled=true 才生效（见文件末尾）
+  data:
+    redis:
+      host: ${SMARTORE_REDIS_HOST:127.0.0.1}
+      port: ${SMARTORE_REDIS_PORT:26379}
+      password: ${SMARTORE_REDIS_PASSWORD:}
   cloud:
     nacos:
       discovery:
@@ -56,6 +63,21 @@ management:
 smartore:
   internal-token: ${SMARTORE_INTERNAL_TOKEN:}
   gateway-token: ${SMARTORE_GATEWAY_TOKEN:}
+  cache:
+    enabled: ${SMARTORE_GOODS_CACHE_ENABLED:true}
+    # Key 前缀按服务隔离：与其他服务共用 db0 时靠前缀区分
+    key-prefix: "goods:cache:"
+    default-ttl: 30m
+    # 分区 TTL（键名必须与 GoodsCacheNames 一致，写错只会静默用 default-ttl）
+    ttls:
+      # 商品列表/单品：库存展示值允许 TTL 内陈旧（下单的权威校验是 stock 表的条件扣减，
+      # 且库存真变动时 StockSagaService 会精确失效 id=N 单键，预检路径始终新鲜）
+      product: 60s
+      # 详情/参数/字典：变更少、读多，用长 TTL + 写时失效
+      detail: 30m
+      param: 30m
+      category: 30m
+      brand: 30m
 
 logging:
   level:

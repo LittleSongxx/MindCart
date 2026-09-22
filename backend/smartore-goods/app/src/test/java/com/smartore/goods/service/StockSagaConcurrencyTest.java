@@ -30,7 +30,9 @@ import static org.junit.jupiter.api.Assertions.*;
                 "spring.cloud.nacos.config.enabled=false",
                 // UserContextFilter 启动期强制双令牌非空（生产由 dev.sh bootstrap 注入），测试给占位值
                 "smartore.internal-token=test-internal-token",
-                "smartore.gateway-token=test-gateway-token"
+                "smartore.gateway-token=test-gateway-token",
+                // 本用例只验库存原子性：关掉缓存，免得缓存失效去连一个测试里并不存在的 Redis
+                "smartore.cache.enabled=false"
         })
 @Testcontainers
 class StockSagaConcurrencyTest {

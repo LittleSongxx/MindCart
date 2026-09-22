@@ -3,12 +3,15 @@ package com.smartore.goods.service;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.smartore.common.result.ResultCodeEnum;
+import com.smartore.goods.cache.GoodsCacheNames;
 import com.smartore.goods.entity.ProductBrand;
 import com.smartore.common.exception.CustomException;
 import com.smartore.goods.mapper.ProductBrandMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +22,8 @@ public class ProductBrandService {
     @Resource
     private ProductBrandMapper productBrandMapper;
 
+    /** 品牌写操作同时清商品缓存：商品列表行里带 brand_name（join product_brand 得来） */
+    @CacheEvict(value = {GoodsCacheNames.BRAND, GoodsCacheNames.PRODUCT}, allEntries = true)
     public void add(ProductBrand productBrand) {
         validate(productBrand);
         if (productBrand.getSort() == null) {
@@ -33,6 +38,7 @@ public class ProductBrandService {
         productBrandMapper.insert(productBrand);
     }
 
+    @CacheEvict(value = {GoodsCacheNames.BRAND, GoodsCacheNames.PRODUCT}, allEntries = true)
     public void updateById(ProductBrand productBrand) {
         if (ObjectUtil.isEmpty(productBrand.getId())) {
             throw new CustomException(ResultCodeEnum.PARAM_LOST_ERROR);
@@ -42,16 +48,22 @@ public class ProductBrandService {
         productBrandMapper.updateById(productBrand);
     }
 
+    @CacheEvict(value = {GoodsCacheNames.BRAND, GoodsCacheNames.PRODUCT}, allEntries = true)
     public void deleteById(Integer id) {
         productBrandMapper.deleteById(id);
     }
 
+    @CacheEvict(value = {GoodsCacheNames.BRAND, GoodsCacheNames.PRODUCT}, allEntries = true)
     public void deleteBatch(List<Integer> ids) {
         for (Integer id : ids) {
             productBrandMapper.deleteById(id);
         }
     }
 
+    /** 品牌字典与分类同理：小而稳定、前台每次进首页都要拉 */
+    @Cacheable(value = GoodsCacheNames.BRAND,
+            key = "T(com.smartore.goods.cache.GoodsCacheKeys).brandKey(#productBrand)",
+            sync = true)
     public List<ProductBrand> selectAll(ProductBrand productBrand) {
         return productBrandMapper.selectAll(productBrand);
     }

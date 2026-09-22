@@ -1,6 +1,9 @@
 package com.smartore.goods.entity;
 
-public class ProductDetail {
+import java.io.Serializable;
+
+// 实现 Serializable：详情（含长文本）会经 @Cacheable 写入 Redis
+public class ProductDetail implements Serializable {
 
     private Integer id;
     private Integer productId;

@@ -1,6 +1,9 @@
 package com.smartore.goods.entity;
 
-public class ProductParam {
+import java.io.Serializable;
+
+// 实现 Serializable：参数列表会经 @Cacheable 写入 Redis
+public class ProductParam implements Serializable {
 
     private Integer id;
     private Integer productId;

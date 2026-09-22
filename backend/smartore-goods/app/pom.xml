@@ -85,6 +85,16 @@
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-crypto</artifactId>
     </dependency>
+    <!-- 商品目录读多写少，挂 Redis 缓存（装配在 common 的 CacheAutoConfiguration，
+         通过 smartore.cache.enabled=true 显式开启） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

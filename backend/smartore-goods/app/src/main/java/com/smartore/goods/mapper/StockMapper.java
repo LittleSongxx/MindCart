@@ -32,6 +32,10 @@ public interface StockMapper {
             + "set p.stock_quantity = s.available, p.update_time = now() where p.id = #{productId}")
     int syncProductDisplay(@Param("productId") Integer productId);
 
+    /** 商品被删除时同步清掉库存权威行，避免留下孤儿行（商品 id 复用时会被 upsert 命中而"继承"旧库存） */
+    @org.apache.ibatis.annotations.Delete("delete from stock where product_id = #{productId}")
+    int deleteByProductId(@Param("productId") Integer productId);
+
     @Select("select * from stock where product_id = #{productId}")
     com.smartore.goods.entity.Stock selectByProductId(@Param("productId") Integer productId);
 

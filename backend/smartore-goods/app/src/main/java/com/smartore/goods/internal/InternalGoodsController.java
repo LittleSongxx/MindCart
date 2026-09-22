@@ -26,6 +26,12 @@ public class InternalGoodsController {
     @Resource
     private ProductMapper productMapper;
     @Resource
+    private com.smartore.goods.service.ProductService productService;
+    @Resource
+    private com.smartore.goods.service.ProductDetailService productDetailService;
+    @Resource
+    private com.smartore.goods.service.ProductParamService productParamService;
+    @Resource
     private StockSagaService stockSagaService;
     @Resource
     private com.smartore.goods.service.AfterSaleRuleService afterSaleRuleService;
@@ -98,6 +104,8 @@ public class InternalGoodsController {
             condition.setPrice(maxPrice);
         }
         PageHelper.startPage(1, Math.max(1, Math.min(limit == null ? 8 : limit, 50)));
+        // 这里必须直连 mapper：PageHelper 开启后返回的只是"分页切片"，
+        // 若套上 @Cacheable 会把第一个调用者的那一片缓存下来发给所有人（分页与缓存的经典冲突）
         return productMapper.selectAll(condition).stream().map(this::toVO).toList();
     }
 
@@ -193,6 +201,7 @@ public class InternalGoodsController {
         Product condition = new Product();
         condition.setStatus("ON_SALE");
         PageHelper.startPage(Math.max(1, page), Math.max(1, Math.min(size, 500)));
+        // 同 searchOnSalePage：分页查询直连 mapper，不进缓存
         List<ProductSyncVO> out = productMapper.selectAll(condition).stream()
                 .map(p -> toSyncVO(p, categoryNames, brandNames))
                 .toList();
@@ -237,7 +246,7 @@ public class InternalGoodsController {
         }
         vo.setProductId(product.getId());
         vo.setProductName(product.getName());
-        com.smartore.goods.entity.ProductDetail detail = productDetailMapper.selectByProductId(productId);
+        com.smartore.goods.entity.ProductDetail detail = productDetailService.selectByProductId(productId);
         if (detail != null) {
             vo.setDetailContent(detail.getDetailContent());
             vo.setPackageInfo(detail.getPackageInfo());
@@ -245,7 +254,7 @@ public class InternalGoodsController {
         }
         com.smartore.goods.entity.ProductParam condition = new com.smartore.goods.entity.ProductParam();
         condition.setProductId(productId);
-        vo.setParams(productParamMapper.selectAll(condition).stream().map(param -> {
+        vo.setParams(productParamService.selectAll(condition).stream().map(param -> {
             com.smartore.goods.api.KnowledgeSourceVO.ParamEntry entry = new com.smartore.goods.api.KnowledgeSourceVO.ParamEntry();
             entry.setParamGroup(param.getParamGroup());
             entry.setParamName(param.getParamName());
@@ -296,7 +305,9 @@ public class InternalGoodsController {
     private Product findProduct(Integer id) {
         Product condition = new Product();
         condition.setId(id);
-        List<Product> list = productMapper.selectAll(condition);
+        // 走 service 而非 mapper：按 id 的读取共用商品缓存的 id=N 键，
+        // 购物车/AI 工具/下单前库存预检都因此吃到同一份缓存，且被库存变动精确失效
+        List<Product> list = productService.selectAll(condition);
         return list.isEmpty() ? null : list.get(0);
     }
 

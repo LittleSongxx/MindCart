@@ -65,6 +65,23 @@
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
     </dependency>
+    <!-- 共享缓存装配：optional 表示不向使用方传递，需要缓存的服务各自声明这两个 starter。
+         这样 common 可以承载缓存基础设施，而不用把 Redis 强加给每个服务 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- 仅测试用：common 只依赖校验 API（运行期的 provider 由各服务的 starter-validation 提供），
          单测要跑真实的 ConstraintViolation 就得引入实现 -->
     <dependency>
